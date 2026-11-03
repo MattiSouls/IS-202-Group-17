@@ -4,7 +4,8 @@ WORKDIR /src
 
 # Copy the web project and restore its dependencies.
 COPY WebApplicationInAspire/WebApplicationInAspire.csproj WebApplicationInAspire/
-RUN dotnet restore WebApplicationInAspire/WebApplicationInAspire.csproj
+COPY WebApplicationInAspire/packages.lock.json WebApplicationInAspire/
+RUN dotnet restore WebApplicationInAspire/WebApplicationInAspire.csproj --locked-mode
 
 # Copy the remaining source files and publish the application.
 COPY WebApplicationInAspire/ WebApplicationInAspire/
@@ -22,5 +23,9 @@ ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
 COPY --from=build /app/publish .
+
+RUN mkdir -p /app/keys && chown $APP_UID:$APP_UID /app/keys
+
+USER $APP_UID
 
 ENTRYPOINT ["dotnet", "WebApplicationInAspire.dll"]

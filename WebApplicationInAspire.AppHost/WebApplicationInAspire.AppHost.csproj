@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WebApplicationInAspire\WebApplicationInAspire.csproj" />
+    <PackageReference Include="MessagePack" Version="2.5.303" PrivateAssets="all" />
   </ItemGroup>
 
   <PropertyGroup>
