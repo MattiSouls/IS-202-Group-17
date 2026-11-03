@@ -4,14 +4,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebApplicationInAspire.DataAccess;
 using WebApplicationInAspire.DataAccess.Repositories;
+using WebApplicationInAspire.Security;
 
-// Sikrer at desimaltall med punktum (fra Leaflet/kart) parses likt uavhengig av PC-ens språkinnstilling
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
 
 var dataProtection = builder.Services.AddDataProtection()
@@ -31,8 +30,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, new MariaDbServerVersion(new Version(11, 4, 0))));
 builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
 
-// Identity: brukere og roller lagres i MariaDB via ApplicationDbContext.
-// Passord lagres som hash av Identity, aldri i klartekst.
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
     options.Password.RequiredLength = 8;
@@ -43,10 +40,10 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     options.User.RequireUniqueEmail = true;
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-    options.SignIn.RequireConfirmedAccount = false; // ingen e-posttjeneste i prosjektet
+    options.SignIn.RequireConfirmedAccount = false;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders(); // trengs for tofaktor med autentikator-app
+.AddDefaultTokenProviders();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -60,7 +57,6 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var app = builder.Build();
 
-// Compose slår dette på for lokal utvikling. Andre miljøer bruker eksplisitte migrasjoner.
 if (app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
 {
     using var scope = app.Services.CreateScope();
@@ -68,21 +64,20 @@ if (app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
     await database.Database.MigrateAsync();
 }
 
-// Configure the HTTP request pipeline.
+using (var seedScope = app.Services.CreateScope())
+{
+    await IdentitySeeder.SeedAsync(seedScope.ServiceProvider, app.Configuration, app.Environment);
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
-}
-
-if (!app.Environment.IsDevelopment())
-{
     app.UseHttpsRedirection();
 }
+
 app.UseRouting();
 
-// Authentication må komme før Authorization, ellers kjenner ikke appen igjen innlogget bruker.
 app.UseAuthentication();
 app.UseAuthorization();
 
