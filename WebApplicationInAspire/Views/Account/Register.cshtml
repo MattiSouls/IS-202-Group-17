@@ -1,0 +1,41 @@
+@model WebApplicationInAspire.Models.Account.RegisterViewModel
+@{
+    ViewData["Title"] = "Registrer bruker";
+}
+
+<h1 class="h3 mb-3">Registrer deg som ressursleverandør</h1>
+
+<div class="row">
+    <div class="col-md-6 col-lg-5">
+        <form asp-action="Register" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="username" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" autocomplete="new-password" />
+                <div class="form-text">Minst 8 tegn, med stor og liten bokstav og et tall.</div>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ConfirmPassword" class="form-label"></label>
+                <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Registrer</button>
+        </form>
+
+        <p class="mt-3">Har du allerede konto? <a asp-action="Login">Logg inn</a></p>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
