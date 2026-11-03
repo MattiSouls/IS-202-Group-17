@@ -32,7 +32,7 @@ builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
 
 var app = builder.Build();
 
-// Compose slar dette pa for lokal utvikling. Andre miljoer bruker eksplisitte migrasjoner.
+// Compose slår dette på for lokal utvikling. Andre miljøer bruker eksplisitte migrasjoner.
 if (app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
 {
     using var scope = app.Services.CreateScope();

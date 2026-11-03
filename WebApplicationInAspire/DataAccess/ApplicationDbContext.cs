@@ -13,7 +13,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        // Identity ma konfigurere sine tabeller for de egne entitetene legges til.
+        // Identity må konfigurere sine tabeller for de egne entitetene legges til.
         base.OnModelCreating(builder);
 
         builder.Entity<Resource>(resource =>

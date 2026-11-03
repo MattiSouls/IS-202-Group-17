@@ -3,7 +3,7 @@ using WebApplicationInAspire.Models.Entities;
 namespace WebApplicationInAspire.DataAccess.Repositories;
 
 /// <summary>
-/// Datatilgang for ressursene. Controlleren ma kontrollere brukerens rettigheter for skriving.
+/// Datatilgang for ressursene. Controlleren må kontrollere brukerens rettigheter for skriving.
 /// </summary>
 public interface IResourceRepository
 {

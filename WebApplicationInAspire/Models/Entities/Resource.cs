@@ -31,7 +31,7 @@ public class Resource
     [Range(-180, 180)]
     public double Longitude { get; set; }
 
-    /// <summary>Identity-brukeren som eier ressursen. Settes pa serveren.</summary>
+    /// <summary>Identity-brukeren som eier ressursen. Settes på serveren.</summary>
     [Required]
     public string OwnerId { get; set; } = string.Empty;
 
