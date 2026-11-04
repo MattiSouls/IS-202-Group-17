@@ -8,6 +8,7 @@
 
 <form method="post" asp-controller="Resource" asp-action="Edit" asp-route-id="@Model.Id">
     <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
     <div>
         <label asp-for="Name">Navn:</label>
@@ -41,14 +42,47 @@
 
     <div>
         <label>Posisjon (klikk i kartet):</label>
-        <div id="map" style="height: 400px; border: 1px solid black;"></div>
+        <div id="map" style="height: clamp(260px, 50vh, 480px); border: 1px solid black;"></div>
     </div>
 
     <input type="hidden" asp-for="Latitude" id="Latitude" />
     <input type="hidden" asp-for="Longitude" id="Longitude" />
     <span asp-validation-for="Latitude"></span>
+    <span asp-validation-for="Longitude"></span>
 
     <br />
     <button type="submit">Lagre endringer</button>
     <a asp-action="Overview">Avbryt</a>
 </form>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const latitudeInput = document.getElementById('Latitude');
+        const longitudeInput = document.getElementById('Longitude');
+        const latitude = Number(latitudeInput.value);
+        const longitude = Number(longitudeInput.value);
+        const hasPosition = latitudeInput.value.trim() !== '' && longitudeInput.value.trim() !== ''
+            && Number.isFinite(latitude) && Number.isFinite(longitude)
+            && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
+
+        // Feltene inneholder lagret posisjon, eller sist innsendte punkt ved valideringsfeil.
+        const map = L.map('map').setView(hasPosition ? [latitude, longitude] : [58.1467, 7.9956], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap-bidragsytere'
+        }).addTo(map);
+        let marker = hasPosition ? L.marker([latitude, longitude]).addTo(map) : null;
+
+        map.on('click', function (event) {
+            if (marker) {
+                marker.setLatLng(event.latlng);
+            } else {
+                marker = L.marker(event.latlng).addTo(map);
+            }
+            latitudeInput.value = event.latlng.lat;
+            longitudeInput.value = event.latlng.lng;
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+}
