@@ -1,0 +1,57 @@
+@model IReadOnlyList<WebApplicationInAspire.Models.Entities.Need>
+
+@{
+    ViewData["Title"] = "Registrerte behov";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Registrerte behov</h2>
+        <a asp-action="Register" class="btn btn-primary">
+            Registrer nytt behov
+        </a>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <p>Det er ikke registrert noen behov ennå.</p>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var need in Model)
+            {
+                <div class="col-12 col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h5">@need.Type</h3>
+
+                            <p><strong>Region:</strong> @need.Region</p>
+                            <p><strong>Lokasjon:</strong> @need.Location</p>
+                            <p><strong>Tidspunkt:</strong> @need.NeededAt</p>
+                            <p><strong>Prioritet:</strong> @need.Priority</p>
+                            <p><strong>Kontaktperson:</strong> @need.ContactName</p>
+                            <p><strong>Telefon:</strong> @need.PhoneNumber</p>
+                            <p><strong>Status:</strong> @need.Status</p>
+                            <form asp-controller="Need" asp-action="UpdateStatus" method="post">
+    <input type="hidden" name="id" value="@need.Id" />
+
+    <label for="status-@need.Id">Endre status:</label>
+
+    <select name="status" id="status-@need.Id" class="form-select">
+        <option value="New">Ny</option>
+        <option value="UnderReview">Vurderes</option>
+        <option value="Resolved">Løst</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary mt-2">
+        Oppdater status
+    </button>
+</form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

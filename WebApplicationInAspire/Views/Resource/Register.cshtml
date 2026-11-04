@@ -67,23 +67,42 @@
             attribution: '&copy; OpenStreetMap-bidragsytere'
         }).addTo(map);
 
-        var marker;
+        var latitudeInput = document.getElementById('Latitude');
+var longitudeInput = document.getElementById('Longitude');
 
-        // Lytter etter klikk på kartet
-        map.on('click', function (e) {
-            var lat = e.latlng.lat;
-            var lng = e.latlng.lng;
+var latitude = Number(latitudeInput.value);
+var longitude = Number(longitudeInput.value);
 
-            if (marker) {
-                marker.setLatLng(e.latlng);
-            } else {
-                marker = L.marker(e.latlng).addTo(map);
-            }
+var hasPosition =
+    latitudeInput.value.trim() !== '' &&
+    longitudeInput.value.trim() !== '' &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    Math.abs(latitude) <= 90 &&
+    Math.abs(longitude) <= 180;
 
-            // Setter koordinatene direkte i de skjulte feltene
-            document.getElementById('Latitude').value = lat;
-            document.getElementById('Longitude').value = lng;
-        });
+var marker = null;
+
+// Gjenoppretter markøren hvis skjemaet har blitt sendt inn med valideringsfeil.
+if (hasPosition) {
+    marker = L.marker([latitude, longitude]).addTo(map);
+    map.setView([latitude, longitude], 13);
+}
+
+// Lytter etter klikk på kartet.
+map.on('click', function (e) {
+    var lat = e.latlng.lat;
+    var lng = e.latlng.lng;
+
+    if (marker) {
+        marker.setLatLng(e.latlng);
+    } else {
+        marker = L.marker(e.latlng).addTo(map);
+    }
+
+    latitudeInput.value = lat;
+    longitudeInput.value = lng;
+});
     </script>
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }
