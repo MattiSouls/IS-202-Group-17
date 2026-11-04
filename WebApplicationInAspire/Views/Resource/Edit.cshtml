@@ -1,0 +1,54 @@
+﻿@model WebApplicationInAspire.Models.ResourceViewModel
+
+@{
+    ViewData["Title"] = "Rediger ressurs";
+}
+
+<h2>Rediger ressurs</h2>
+
+<form method="post" asp-controller="Resource" asp-action="Edit" asp-route-id="@Model.Id">
+    <input type="hidden" asp-for="Id" />
+
+    <div>
+        <label asp-for="Name">Navn:</label>
+        <input asp-for="Name" />
+        <span asp-validation-for="Name"></span>
+    </div>
+
+    <div>
+        <label asp-for="Type">Type:</label>
+        <input asp-for="Type" />
+        <span asp-validation-for="Type"></span>
+    </div>
+
+    <div>
+        <label asp-for="Description">Beskrivelse:</label>
+        <input asp-for="Description" />
+        <span asp-validation-for="Description"></span>
+    </div>
+
+    <div>
+        <label asp-for="ContactName">Kontaktperson:</label>
+        <input asp-for="ContactName" />
+        <span asp-validation-for="ContactName"></span>
+    </div>
+
+    <div>
+        <label asp-for="PhoneNumber">Telefonnummer:</label>
+        <input asp-for="PhoneNumber" />
+        <span asp-validation-for="PhoneNumber"></span>
+    </div>
+
+    <div>
+        <label>Posisjon (klikk i kartet):</label>
+        <div id="map" style="height: 400px; border: 1px solid black;"></div>
+    </div>
+
+    <input type="hidden" asp-for="Latitude" id="Latitude" />
+    <input type="hidden" asp-for="Longitude" id="Longitude" />
+    <span asp-validation-for="Latitude"></span>
+
+    <br />
+    <button type="submit">Lagre endringer</button>
+    <a asp-action="Overview">Avbryt</a>
+</form>

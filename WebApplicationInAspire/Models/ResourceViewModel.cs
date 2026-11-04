@@ -1,9 +1,11 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace WebApplicationInAspire.Models;
 
 public class ResourceViewModel
 {
+    public int? Id { get; set; }
+
     [Required(ErrorMessage = "Navn er påkrevd")]
     public string Name { get; set; } = string.Empty;
 

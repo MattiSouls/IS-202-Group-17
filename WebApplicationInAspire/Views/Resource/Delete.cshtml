@@ -1,0 +1,19 @@
+﻿@model WebApplicationInAspire.Models.Entities.Resource
+
+@{
+    ViewData["Title"] = "Slett ressurs";
+}
+
+<h2>Slett ressurs</h2>
+<p>Er du sikker på at du vil slette denne ressursen?</p>
+
+<div>
+    <h4>@Model.Name</h4>
+    <p><strong>Type:</strong> @Model.Type</p>
+    <p><strong>Kontaktperson:</strong> @Model.ContactName (@Model.PhoneNumber)</p>
+</div>
+
+<form method="post" asp-controller="Resource" asp-action="Delete" asp-route-id="@Model.Id">
+    <button type="submit" style="color: red;">Bekreft sletting</button>
+    <a asp-action="Overview">Avbryt</a>
+</form>
