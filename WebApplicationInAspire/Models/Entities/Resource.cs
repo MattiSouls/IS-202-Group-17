@@ -14,12 +14,12 @@ public class Resource
     public string Name { get; set; } = string.Empty;
 
     [Required, MaxLength(100)]
-  public string Type { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
 
-[Required, MaxLength(200)]
-public string Region { get; set; } = string.Empty;
-public bool IsAvailable { get; set; } = true;
+    [Required, MaxLength(200)]
+    public string Region { get; set; } = string.Empty;
 
+    public bool IsAvailable { get; set; } = true;
 
     [MaxLength(4000)]
     public string? Description { get; set; }

@@ -22,6 +22,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             resource.ToTable("Resources");
             resource.Property(item => item.OwnerId).HasMaxLength(255);
             resource.Property(item => item.CreatedAtUtc).HasColumnType("datetime(6)");
+            // Ressurser registrert før tilgjengelighetsfeltet ble innført, er fortsatt tilgjengelige.
+            resource.Property(item => item.IsAvailable).HasDefaultValue(true);
             resource.HasOne(item => item.Owner)
                 .WithMany()
                 .HasForeignKey(item => item.OwnerId)

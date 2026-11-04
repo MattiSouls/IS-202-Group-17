@@ -226,6 +226,9 @@ namespace WebApplicationInAspire.DataAccess.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AssignedResourceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ContactName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -270,6 +273,8 @@ namespace WebApplicationInAspire.DataAccess.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssignedResourceId");
+
                     b.HasIndex("CreatedByUserId");
 
                     b.ToTable("Needs", (string)null);
@@ -295,6 +300,11 @@ namespace WebApplicationInAspire.DataAccess.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
 
+                    b.Property<bool>("IsAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
                     b.Property<double>("Latitude")
                         .HasColumnType("double");
 
@@ -315,6 +325,11 @@ namespace WebApplicationInAspire.DataAccess.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -381,11 +396,18 @@ namespace WebApplicationInAspire.DataAccess.Migrations
 
             modelBuilder.Entity("WebApplicationInAspire.Models.Entities.Need", b =>
                 {
+                    b.HasOne("WebApplicationInAspire.Models.Entities.Resource", "AssignedResource")
+                        .WithMany()
+                        .HasForeignKey("AssignedResourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AssignedResource");
 
                     b.Navigation("CreatedByUser");
                 });

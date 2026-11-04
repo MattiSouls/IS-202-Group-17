@@ -32,9 +32,10 @@ public class Need
 
     [Required, MaxLength(30)]
     public string Status { get; set; } = NeedStatuses.New;
+
     public int? AssignedResourceId { get; set; }
 
-public Resource? AssignedResource { get; set; }
+    public Resource? AssignedResource { get; set; }
 
     /// <summary>Offentlig bruker som opprettet behovet. Settes på serveren.</summary>
     [Required]
