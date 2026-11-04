@@ -30,7 +30,7 @@
 
         <div class="mb-3">
             <label asp-for="NeededAt" class="form-label">Når trengs hjelpen?</label>
-            <input asp-for="NeededAt" type="datetime-local" class="form-control" />
+            <input asp-for="NeededAt" type="datetime-local" min="1000-01-01T00:00" class="form-control" />
             <span asp-validation-for="NeededAt" class="text-danger"></span>
         </div>
 
@@ -59,6 +59,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary">Registrer behov</button>
+        <a asp-action="Overview" class="btn btn-secondary">Til behovsoversikten</a>
     </form>
 </div>
 

@@ -30,6 +30,10 @@ services:
       ConnectionStrings__DefaultConnection: "Server=mariadb;Port=3306;Database=${MARIADB_DATABASE:-resourcesdb};User ID=${MARIADB_USER:-resourcesapp};Password=${MARIADB_PASSWORD:?Create .env before starting Compose};"
       Database__ApplyMigrationsOnStartup: "true"
       DataProtection__KeyDirectory: /app/keys
+      SeedUsers__PublicUser__Email: ${SEED_PUBLIC_EMAIL:-}
+      SeedUsers__PublicUser__Password: ${SEED_PUBLIC_PASSWORD:-}
+      SeedUsers__Admin__Email: ${SEED_ADMIN_EMAIL:-}
+      SeedUsers__Admin__Password: ${SEED_ADMIN_PASSWORD:-}
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:8080"
     volumes:

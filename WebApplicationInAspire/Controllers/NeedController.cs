@@ -1,66 +1,88 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WebApplicationInAspire.DataAccess.Repositories;
 using WebApplicationInAspire.Models;
 using WebApplicationInAspire.Models.Entities;
+using WebApplicationInAspire.Security;
 
 namespace WebApplicationInAspire.Controllers;
 
-[Authorize]
-public class NeedController : Controller
+/// <summary>Offentlige brukere registrerer behov; oppretter eller administrator endrer status.</summary>
+[Authorize(Roles = RoleNames.PublicUser + "," + RoleNames.Admin)]
+public class NeedController(INeedRepository repository, ILogger<NeedController> logger) : Controller
 {
-    // Viser skjemaet for å registrere et nytt behov
+    /// <summary>Viser skjemaet for et nytt behov.</summary>
     [HttpGet]
-    public IActionResult Register()
-    {
-        return View(new NeedViewModel());
-    }
+    public IActionResult Register() => View(new NeedViewModel());
 
-    // Mottar informasjonen fra registreringsskjemaet
+    /// <summary>Validerer og lagrer behovet med innlogget bruker som oppretter.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Register(NeedViewModel model)
+    public async Task<IActionResult> Register(NeedViewModel model)
     {
         if (!ModelState.IsValid)
         {
             return View(model);
         }
 
-        // Lagring kobles til når database/repository er klart.
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Challenge();
+        }
+
+        var need = new Need
+        {
+            Type = model.Type,
+            Region = model.Region,
+            Location = model.Location,
+            NeededAt = model.NeededAt!.Value,
+            Priority = model.Priority,
+            ContactName = model.ContactName,
+            PhoneNumber = model.PhoneNumber,
+            CreatedByUserId = userId,
+            Status = NeedStatuses.New
+        };
+        await repository.AddAsync(need);
+        logger.LogInformation("Behov {NeedId} opprettet av bruker {UserId}", need.Id, userId);
         TempData["SuccessMessage"] = "Behovet er registrert.";
-
-        return RedirectToAction(nameof(Register));
+        return RedirectToAction(nameof(Overview));
     }
 
-    // Viser oversikten over registrerte behov
-[HttpGet]
-public IActionResult Overview()
-{
-    var needs = new List<Need>();
+    /// <summary>Viser lagrede behov for offentlige brukere og administratorer.</summary>
+    [HttpGet]
+    public async Task<IActionResult> Overview() => View(await repository.GetAllAsync());
 
-    return View(needs);
-}
-
-
-// Endrer status på et behov
-[HttpPost]
-[ValidateAntiForgeryToken]
-public IActionResult UpdateStatus(int id, string status)
-{
-    var allowedStatuses = new[]
+    /// <summary>Oppdaterer manuell status uten å overstyre tildelingsflyten.</summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateStatus(int id, string status)
     {
-        NeedStatuses.New,
-        NeedStatuses.UnderReview,
-        NeedStatuses.Assigned,
-        NeedStatuses.Resolved
-    };
+        if (status is not (NeedStatuses.New or NeedStatuses.UnderReview or NeedStatuses.Resolved))
+        {
+            return BadRequest();
+        }
 
-    if (!allowedStatuses.Contains(status))
-    {
-        return BadRequest();
+        var need = await repository.GetByIdAsync(id);
+        if (need is null)
+        {
+            return NotFound();
+        }
+
+        if (need.CreatedByUserId != User.FindFirstValue(ClaimTypes.NameIdentifier)
+            && !User.IsInRole(RoleNames.Admin))
+        {
+            return Forbid();
+        }
+
+        if (!await repository.UpdateStatusAsync(id, status))
+        {
+            return Conflict("Behovet kan ikke endres her. Et tildelt behov må håndteres gjennom tildelingsflyten.");
+        }
+
+        logger.LogInformation("Status for behov {NeedId} endret til {Status}", id, status);
+        TempData["SuccessMessage"] = "Statusen er oppdatert.";
+        return RedirectToAction(nameof(Overview));
     }
-
-    // Selve oppdateringen kobles til databasen senere.
-    return RedirectToAction(nameof(Overview));
-}
-
 }

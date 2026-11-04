@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Identity;
 
 namespace WebApplicationInAspire.Models.Entities;
 
@@ -31,6 +32,12 @@ public class Need
 
     [Required, MaxLength(30)]
     public string Status { get; set; } = NeedStatuses.New;
+
+    /// <summary>Offentlig bruker som opprettet behovet. Settes på serveren.</summary>
+    [Required]
+    public string CreatedByUserId { get; set; } = string.Empty;
+
+    public IdentityUser CreatedByUser { get; set; } = null!;
 }
 
 /// <summary>
@@ -42,4 +49,4 @@ public static class NeedStatuses
     public const string UnderReview = "UnderReview";
     public const string Assigned = "Assigned";
     public const string Resolved = "Resolved";
-} 
+}
