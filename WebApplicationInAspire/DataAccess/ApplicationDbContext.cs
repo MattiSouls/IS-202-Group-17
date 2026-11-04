@@ -37,6 +37,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .WithMany()
                 .HasForeignKey(item => item.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            need.HasOne(item => item.AssignedResource)
+                .WithMany()
+                .HasForeignKey(item => item.AssignedResourceId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
