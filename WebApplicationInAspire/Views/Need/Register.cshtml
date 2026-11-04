@@ -1,0 +1,68 @@
+@model WebApplicationInAspire.Models.NeedViewModel
+
+@{
+    ViewData["Title"] = "Registrer behov";
+}
+
+<div class="container mt-4">
+    <h2>Registrer nytt behov</h2>
+
+    <form asp-controller="Need" asp-action="Register" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="mb-3">
+            <label asp-for="Type" class="form-label">Type behov:</label>
+            <input asp-for="Type" class="form-control" />
+            <span asp-validation-for="Type" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Region" class="form-label">Region:</label>
+            <input asp-for="Region" class="form-control" />
+            <span asp-validation-for="Region" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Location" class="form-label">Lokasjon:</label>
+            <input asp-for="Location" class="form-control" />
+            <span asp-validation-for="Location" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="NeededAt" class="form-label">Når trengs hjelpen?</label>
+            <input asp-for="NeededAt" type="datetime-local" min="1000-01-01T00:00" class="form-control" />
+            <span asp-validation-for="NeededAt" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Priority" class="form-label">Prioritet:</label>
+            <select asp-for="Priority" class="form-select">
+                <option value="">Velg prioritet</option>
+                <option value="Low">Lav</option>
+                <option value="Medium">Middels</option>
+                <option value="High">Høy</option>
+                <option value="Urgent">Haster</option>
+            </select>
+            <span asp-validation-for="Priority" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ContactName" class="form-label">Kontaktperson:</label>
+            <input asp-for="ContactName" class="form-control" />
+            <span asp-validation-for="ContactName" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="PhoneNumber" class="form-label">Telefonnummer:</label>
+            <input asp-for="PhoneNumber" class="form-control" />
+            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Registrer behov</button>
+        <a asp-action="Overview" class="btn btn-secondary">Til behovsoversikten</a>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
