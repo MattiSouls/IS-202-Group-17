@@ -21,6 +21,10 @@ public class Resource
 
     public bool IsAvailable { get; set; } = true;
 
+    /// <summary>Norsk lokal tid. Null betyr at eier må oppdatere en eldre registrering.</summary>
+    public DateTime? AvailableFrom { get; set; }
+    public DateTime? AvailableUntil { get; set; }
+
     [MaxLength(4000)]
     public string? Description { get; set; }
 

@@ -27,15 +27,7 @@
         <span asp-validation-for="Type"></span>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="Region" class="form-label">Region:</label>
-        <input asp-for="Region" class="form-control" />
-        <span asp-validation-for="Region" class="text-danger"></span>
-    </div>
-    <div class="form-check mb-3">
-        <input asp-for="IsAvailable" class="form-check-input" />
-        <label asp-for="IsAvailable" class="form-check-label"></label>
-    </div>
+    <partial name="_ResourceAvailability" model="Model" />
     <div class="mb-3">
         <label asp-for="Description">Beskrivelse:</label>
         <input asp-for="Description" class="form-control" />
@@ -54,15 +46,7 @@
         <span asp-validation-for="PhoneNumber"></span>
     </div>
 
-    <div class="mb-3">
-        <label>Posisjon (klikk i kartet):</label>
-        <div id="map" style="height: clamp(260px, 50vh, 480px); border: 1px solid black;"></div>
-    </div>
-
-    <input type="hidden" asp-for="Latitude" id="Latitude" />
-    <input type="hidden" asp-for="Longitude" id="Longitude" />
-    <span asp-validation-for="Latitude"></span>
-    <span asp-validation-for="Longitude"></span>
+    <partial name="_ResourcePosition" model="Model" />
 
     <br />
     <button type="submit" class="btn btn-primary">Lagre endringer</button>
@@ -73,31 +57,6 @@
 @section Scripts {
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const latitudeInput = document.getElementById('Latitude');
-        const longitudeInput = document.getElementById('Longitude');
-        const latitude = Number(latitudeInput.value);
-        const longitude = Number(longitudeInput.value);
-        const hasPosition = latitudeInput.value.trim() !== '' && longitudeInput.value.trim() !== ''
-            && Number.isFinite(latitude) && Number.isFinite(longitude)
-            && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
-
-        // Feltene inneholder lagret posisjon, eller sist innsendte punkt ved valideringsfeil.
-        const map = L.map('map').setView(hasPosition ? [latitude, longitude] : [58.1467, 7.9956], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap-bidragsytere'
-        }).addTo(map);
-        let marker = hasPosition ? L.marker([latitude, longitude]).addTo(map) : null;
-
-        map.on('click', function (event) {
-            if (marker) {
-                marker.setLatLng(event.latlng);
-            } else {
-                marker = L.marker(event.latlng).addTo(map);
-            }
-            latitudeInput.value = event.latlng.lat;
-            longitudeInput.value = event.latlng.lng;
-        });
-    </script>
+    <script src="~/js/resource-position.js" asp-append-version="true"></script>
     <partial name="_ValidationScriptsPartial" />
 }

@@ -13,6 +13,7 @@ public class ResourceRepository(ApplicationDbContext context) : IResourceReposit
         var query = context.Resources.AsNoTracking();
         if (ownerId is not null) query = query.Where(resource => resource.OwnerId == ownerId);
         if (availableOnly) query = query.Where(resource => resource.IsAvailable
+            && resource.AvailableFrom != null && resource.AvailableUntil > resource.AvailableFrom
             && !context.Needs.Any(need => need.AssignedResourceId == resource.Id && need.Status == NeedStatuses.Assigned));
         if (!string.IsNullOrWhiteSpace(region))
         {
@@ -53,6 +54,8 @@ public class ResourceRepository(ApplicationDbContext context) : IResourceReposit
         stored.Type = resource.Type;
         stored.Region = resource.Region;
         stored.IsAvailable = resource.IsAvailable;
+        stored.AvailableFrom = resource.AvailableFrom;
+        stored.AvailableUntil = resource.AvailableUntil;
         stored.Description = resource.Description;
         stored.ContactName = resource.ContactName;
         stored.PhoneNumber = resource.PhoneNumber;

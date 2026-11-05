@@ -1,0 +1,14 @@
+# Isolert engangsserver. Ingen delte volumer eller prosjektdata brukes.
+services:
+  testdb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: ${TEST_DB_PASSWORD:?Set TEST_DB_PASSWORD}
+      MARIADB_ROOT_HOST: "%"
+    ports:
+      - "127.0.0.1:${TEST_DB_PORT:-43325}:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 5s
+      retries: 30

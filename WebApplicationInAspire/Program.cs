@@ -22,13 +22,14 @@ if (!string.IsNullOrWhiteSpace(keyDirectory))
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
 }
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException(
-        "ConnectionStrings:DefaultConnection mangler. Start med Docker Compose, " +
-        "eller konfigurer lokal databasekobling med User Secrets.");
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, new MariaDbServerVersion(new Version(11, 4, 0))));
+builder.Services.AddDbContext<ApplicationDbContext>((services, options) =>
+{
+    var connectionString = services.GetRequiredService<IConfiguration>().GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException(
+            "ConnectionStrings:DefaultConnection mangler. Start med Docker Compose, " +
+            "eller konfigurer lokal databasekobling med User Secrets.");
+    options.UseMySql(connectionString, new MariaDbServerVersion(new Version(11, 4, 0)));
+});
 builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
 builder.Services.AddScoped<INeedRepository, NeedRepository>();
 builder.Services.AddScoped<AllocationService>();
@@ -92,3 +93,6 @@ app.MapControllerRoute(
     .WithStaticAssets();
 
 app.Run();
+
+/// <summary>Gjør appens vanlige oppstart tilgjengelig for HTTP-integrasjonstestene.</summary>
+public partial class Program { }

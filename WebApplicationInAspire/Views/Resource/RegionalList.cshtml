@@ -17,11 +17,11 @@
     <p>@(Model.IsPublicOverview ? "Tilgjengelige ressurser i regionen" : "Dine ressurser i regionen")</p>
     <button type="button" class="no-print" onclick="window.print()">Skriv ut</button>
     <table><caption>@Model.Resources.Count @(Model.Resources.Count == 1 ? "ressurs" : "ressurser")</caption>
-        <thead><tr><th>Navn</th><th>Type</th><th>Region</th><th>Kontaktperson</th><th>Telefon</th><th>Status</th></tr></thead>
+        <thead><tr><th>Navn</th><th>Type</th><th>Region</th><th>Tidsrom (norsk tid)</th><th>Kontaktperson</th><th>Telefon</th><th>Status</th></tr></thead>
         <tbody>
         @foreach (var resource in Model.Resources)
         {
-            <tr><td>@resource.Name</td><td>@resource.Type</td><td>@resource.Region</td><td>@resource.ContactName</td><td>@resource.PhoneNumber</td>
+            <tr><td>@resource.Name</td><td>@resource.Type</td><td>@resource.Region</td><td><partial name="_ResourcePeriod" model="resource" /></td><td>@resource.ContactName</td><td>@resource.PhoneNumber</td>
                 <td>@(Model.AssignedResourceIds.Contains(resource.Id) ? "Tildelt" : resource.IsAvailable ? "Tilgjengelig" : "Ikke tilgjengelig")</td></tr>
         }
         </tbody>

@@ -27,7 +27,7 @@ public class ResourceController : Controller
         return User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
     }
 
-    // 1. CREATE - Vis skjema
+    /// <summary>Viser skjemaet for leverandør eller administrator.</summary>
     [HttpGet]
     [Authorize(Roles = RoleNames.ResourceProvider + "," + RoleNames.Admin)]
     public IActionResult Register()
@@ -35,7 +35,7 @@ public class ResourceController : Controller
         return View(new ResourceViewModel());
     }
 
-    // 1. CREATE - Lagre til MariaDB
+    /// <summary>Lagrer gyldige inndata i MariaDB med innlogget bruker som eier.</summary>
     [HttpPost]
     [Authorize(Roles = RoleNames.ResourceProvider + "," + RoleNames.Admin)]
     [ValidateAntiForgeryToken]
@@ -55,6 +55,8 @@ public class ResourceController : Controller
             Type = model.Type,
             Region = model.Region.Trim(),
             IsAvailable = model.IsAvailable,
+            AvailableFrom = model.AvailableFrom,
+            AvailableUntil = model.AvailableUntil,
             Description = model.Description,
             ContactName = model.ContactName,
             PhoneNumber = model.PhoneNumber,
@@ -71,7 +73,7 @@ public class ResourceController : Controller
         return RedirectToAction("Overview", "Resource");
     }
 
-    // 2. READ - Oversikt over egne ressurser
+    /// <summary>Leverandører ser egne ressurser; offentlige brukere ser ledige tilbud med kjent tidsrom.</summary>
     [HttpGet]
     public async Task<IActionResult> Overview(string? region)
     {
@@ -106,7 +108,7 @@ public class ResourceController : Controller
         };
     }
 
-    // 3. UPDATE - Vis redigeringsskjema
+    /// <summary>Viser eierens redigeringsskjema og sperrer felt ved aktiv tildeling.</summary>
     [HttpGet]
     public async Task<IActionResult> Edit(int id)
     {
@@ -129,6 +131,8 @@ public class ResourceController : Controller
             Type = resource.Type,
             Region = resource.Region,
             IsAvailable = resource.IsAvailable,
+            AvailableFrom = resource.AvailableFrom,
+            AvailableUntil = resource.AvailableUntil,
             Description = resource.Description,
             ContactName = resource.ContactName,
             PhoneNumber = resource.PhoneNumber,
@@ -140,7 +144,7 @@ public class ResourceController : Controller
         return View(model);
     }
 
-    // 3. UPDATE - Lagre endringer i MariaDB
+    /// <summary>Validerer eierskap og inndata før repositoryets transaksjon utfører endringen.</summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, ResourceViewModel model)
@@ -172,6 +176,8 @@ public class ResourceController : Controller
         existingResource.Type = model.Type;
         existingResource.Region = model.Region.Trim();
         existingResource.IsAvailable = model.IsAvailable;
+        existingResource.AvailableFrom = model.AvailableFrom;
+        existingResource.AvailableUntil = model.AvailableUntil;
         existingResource.Description = model.Description;
         existingResource.ContactName = model.ContactName;
         existingResource.PhoneNumber = model.PhoneNumber;
@@ -190,7 +196,7 @@ public class ResourceController : Controller
         return RedirectToAction(nameof(Overview));
     }
 
-    // 4. DELETE - Vis bekreftelsesside (GET skal IKKE slette direkte!)
+    /// <summary>Viser bekreftelse uten å slette data ved GET.</summary>
     [HttpGet]
     public async Task<IActionResult> Delete(int id)
     {
@@ -210,7 +216,7 @@ public class ResourceController : Controller
         return View(resource);
     }
 
-    // 4. DELETE - Faktisk sletting ved POST
+    /// <summary>Sletter bare ved gyldig POST fra eier/admin og når ressursen ikke er tildelt.</summary>
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
