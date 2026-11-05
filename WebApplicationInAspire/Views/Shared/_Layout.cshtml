@@ -48,7 +48,7 @@ else
         </div>
     </header>
 }
-    <main id="main-content" tabindex="-1" class="workspace-main">
+    <main id="main-content" tabindex="-1" class="workspace-main @ViewData["MainClass"]">
         @if (TempData["SuccessMessage"] is string success) { <div class="feedback success" role="status"><strong>Utført.</strong> @success</div> }
         @if (TempData["ErrorMessage"] is string error) { <div class="feedback warning" role="alert">@error</div> }
         @RenderBody()

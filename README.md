@@ -84,6 +84,12 @@ I ressursoversikten kan du avgrense søket på samme måte. Bruk **Søk med kart
 
 ### Arbeidsflate, varsler og feilvern
 
+Oversikten prioriterer udekkede behov med høyeste prioritet først. Offentlig bruker starter på **Mine behov**, administrator på **Alle behov**; valget er synlig og følger lenkene til oppfølgingsfiltrene. Udekket betyr åpent behov uten tildelt ressurs. «Haster» er brukerens registrerte prioritet, og «tidspunkt passert» betyr at det oppgitte behovstidspunktet har passert. Ingen av delene er en automatisk vurdering av krisens alvor. Ressursleverandøren ser egne tilbud og tildelinger. Oversikten er et tidsstemplet øyeblikksbilde; bare ulest-telleren oppdateres automatisk.
+
+Behovslisten viser ID og tydelig prioritet, med direkte matching for oppretter/admin. Ressursoversikten gir inngang til matching fra et behov og viser utdrag av eierens beskrivelse. Kapasitet tolkes ikke fra fritekst. Tilgjengelighet er eierens opplysning, ikke en fysisk bekreftelse.
+
+Varsler og aktivitet har filtre for alle/uleste/leste og en kompakt hendelsesliste. Oversikten fremhever egne uleste varsler; lest aktivitet kan foldes ut. Ulest er ikke det samme som at handling kreves. Nye varsler gjentar ikke kontaktopplysninger; disse finnes på de beskyttede detaljsidene. Eldre kontaktkopier er beholdt i databasen, men kontakttraileren skjules i varselvisningen.
+
 Tildeling/frigivelse gir varig varsel til ressurseieren og behovets oppretter, og en historikkhendelse i samme transaksjon. Varslene finnes under **Varsler** og på oversikten; ingen SMS eller e-post sendes. Ulest-telleren oppdateres hvert 20. sekund når fanen er synlig. Leverandøren ser kontakt for den aktive tildelingen på ressursens detaljside.
 
 Bekreftelsessider viser konsekvensen før tildeling/frigivelse. Versjonskontroll avviser gamle skjemaer og bekreftelser, også når et behov endres samtidig med tildeling. Registreringsnøkler hindrer at samme skjema lagres dobbelt. Konflikter gir en forklaring og vei tilbake; inntastede redigeringsverdier beholdes. Åpne behov kan redigeres og settes til vurdering/løst uten tildeling.
@@ -125,7 +131,7 @@ Tildeling låser/oppdaterer ressursen før behovet. Bare én forespørsel kan ta
 | Offentlige behov, status, matching og regional liste | NeedController, AllocationService, RegionalList | Need_HTTP_flow, Matching_honors_period, samtidighetstestene og Public_and_regional_overview |
 | Ressursens tidspunkt/frister | AvailableFrom/AvailableUntil i modell/skjema/database/matching | ValidationTests, Invalid_period og Matching_honors_period |
 | Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Nettleserkontroll av smal mobilvisning; reell person-/mobiltest gjenstår |
-| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 73 .NET + 13 JavaScript bestått lokalt; personstudien er ikke utført her |
+| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 77 .NET + 13 JavaScript bestått lokalt; personstudien er ikke utført her |
 | Drift, arkitektur, kode- og KI-dokumentasjon | Denne README-en og kommentarer ved sentral kode | Sammenhold kjøreinstruksjoner, testnavn og faktisk kildekode; gruppa kontrollerer egen KI-beskrivelse |
 
 ### Sikkerhet
@@ -159,7 +165,7 @@ docker compose -p is202-tests -f compose.tests.yaml down
 
 På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECTION_STRING="Server=127.0.0.1;Port=43325;User ID=root;Password=$TEST_DB_PASSWORD;Database=is202_test;"`. Når variabelen ikke er satt, rapporteres integrasjonstestene som **Skipped**, ikke Bestått. CI setter variabelen og kjører alle testene mot en MariaDB-service. Build og test bruker samme Release-konfigurasjon. Testresultater lagres som TRX-artifact i GitHub Actions; Docker-imaget bygges også.
 
-**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **73/73 .NET-tester og 13/13 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
+**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **77/77 .NET-tester og 13/13 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
 
 | Testområde / testnavn | Steg og forventning | Faktisk lokalt resultat |
 |---|---|---|
@@ -204,7 +210,7 @@ KI er brukt som støtte til planlegging, kodeforslag, feilsøking, kodegjennomga
 ## Avgrensninger og videre arbeid
 
 - Reell personbasert brukervennlighetstest og dens resultater gjenstår som beskrevet over.
-- Matching bruker type, region og behovets tidspunkt; avstandssøk, e-postvarsling, vedlegg og audit-logg er ikke implementert.
+- Matching bruker kategori, region eller kartområde og behovets tidspunkt, med luftlinjesortering når posisjon finnes. E-postvarsling, vedlegg og en full sikkerhetslogg er ikke implementert; tildelingshistorikk lagres som beskrevet over.
 - Ressursenes tilgjengelighet vedlikeholdes manuelt. Ingen automatisk bekreftelse mot fysiske forhold.
 - Ressursens tidsrom dekker ett tidspunkt for behovet; booking av flere tidsperioder og behovsvarighet støttes ikke.
 - Norske lokale tidspunkter kan være tvetydige ved sommertid; løsningen er ikke sertifisert for operativ krisehåndtering eller produksjonsdrift.

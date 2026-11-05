@@ -13,31 +13,36 @@ public class NotificationsController(ApplicationDbContext database) : Controller
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
     [HttpGet]
-    public async Task<IActionResult> Index(int page = 1)
+    public async Task<IActionResult> Index(int page = 1, string? filter = null)
     {
         var query = database.Notifications.AsNoTracking().Where(n => n.UserId == UserId);
+        var unread = await query.CountAsync(n => n.ReadAtUtc == null);
+        var selectedFilter = FilterName(filter);
+        if (selectedFilter == "unread") query = query.Where(n => n.ReadAtUtc == null);
+        if (selectedFilter == "read") query = query.Where(n => n.ReadAtUtc != null);
         var total = await query.CountAsync();
         page = Math.Clamp(page, 1, Math.Max(1, (total + 19) / 20));
         return View(new NotificationList(await query.OrderByDescending(n => n.Id).Skip((page - 1) * 20).Take(20).ToListAsync(),
-            await query.CountAsync(n => n.ReadAtUtc == null), page, total));
+            unread, page, total, selectedFilter));
     }
     [HttpGet]
     public async Task<IActionResult> Unread() => Json(new { count = await database.Notifications.CountAsync(n => n.UserId == UserId && n.ReadAtUtc == null) });
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Read(long id)
+    public async Task<IActionResult> Read(long id, string? filter = null, int page = 1)
     {
         if (!await database.Notifications.AnyAsync(n => n.Id == id && n.UserId == UserId)) return NotFound();
         await database.Notifications.Where(n => n.Id == id && n.UserId == UserId && n.ReadAtUtc == null)
             .ExecuteUpdateAsync(update => update.SetProperty(n => n.ReadAtUtc, DateTime.UtcNow));
         TempData["SuccessMessage"] = "Varselet er markert som lest.";
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { filter = FilterName(filter), page = Math.Max(1, page) });
     }
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ReadAll()
+    public async Task<IActionResult> ReadAll(string? filter = null)
     {
         await database.Notifications.Where(n => n.UserId == UserId && n.ReadAtUtc == null)
             .ExecuteUpdateAsync(update => update.SetProperty(n => n.ReadAtUtc, DateTime.UtcNow));
         TempData["SuccessMessage"] = "Alle varslene dine er markert som lest.";
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Index), new { filter = FilterName(filter) });
     }
+    private static string FilterName(string? filter) => filter is "unread" or "read" ? filter : "all";
 }

@@ -4,6 +4,14 @@ namespace WebApplicationInAspire.Services;
 
 public static class PortalDisplay
 {
+    public static string PriorityClass(string value) => value switch { "Urgent" => "urgent", "High" => "high", "Medium" => "medium", _ => "low" };
+    public static DateTime NorwayTime(DateTime utc) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo"));
+    public static string NotificationSummary(PortalNotification notice)
+    {
+        // Eldre beskjedkopier kan inneholde kontaktdata. De vises på den tilgangskontrollerte detaljsiden.
+        var index = notice.Message.LastIndexOf(". Kontakt: ", StringComparison.Ordinal);
+        return index >= 0 ? notice.Message[..(index + 1)] : notice.Message;
+    }
     public static readonly string[] Types = ["Aggregat", "Pumpe", "Transport", "Maskin", "Mannskap", "Lokaler", "Samband", "Drone", "Båt", "Drivstoff", "Sand og grus", "Annet"];
     public static readonly string[] Regions = ["Agder", "Akershus", "Buskerud", "Finnmark", "Innlandet", "Møre og Romsdal", "Nordland", "Oslo", "Rogaland", "Telemark", "Troms", "Trøndelag", "Vestfold", "Vestland", "Østfold"];
     public static string Status(string status) => status switch { "New" => "Ny", "UnderReview" => "Vurderes", "Assigned" => "Tildelt", "Resolved" => "Løst", _ => "Ukjent" };

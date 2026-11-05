@@ -34,9 +34,23 @@ public class NeedListViewModel
 
 public record AssignmentReview(Need Need, Resource Resource, string Action);
 public record AssignmentInfo(Resource Resource, Need? Need);
-public record NotificationList(IReadOnlyList<PortalNotification> Items, int Unread, int Page, int Total);
-public record DashboardViewModel(bool IsPublic, int Resources, int OpenNeeds, int Assigned, int Unread,
-    IReadOnlyList<Need> Upcoming, IReadOnlyList<PortalNotification> Recent);
+public record NotificationList(IReadOnlyList<PortalNotification> Items, int Unread, int Page, int Total, string Filter = "all");
+public class DashboardViewModel
+{
+    public bool IsPublic { get; init; }
+    public bool IsAdmin { get; init; }
+    public bool ShowAllNeeds { get; init; }
+    public int Resources { get; init; }
+    public int Uncovered { get; init; }
+    public int Urgent { get; init; }
+    public int TimePassed { get; init; }
+    public int Assigned { get; init; }
+    public int Unread { get; init; }
+    public DateTime SnapshotAt { get; init; }
+    public IReadOnlyList<Need> Upcoming { get; init; } = [];
+    public IReadOnlyList<PortalNotification> UnreadNotices { get; init; } = [];
+    public IReadOnlyList<PortalNotification> Recent { get; init; } = [];
+}
 
 public record Paging(int Page, int Total, string Controller, string Action, Dictionary<string, string> Values, int PageSize = 10)
 {

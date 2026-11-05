@@ -66,6 +66,103 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
     }
 
     [MariaDbFact]
+    public async Task Dashboard_prioritizes_uncovered_needs_with_explicit_scope_and_private_notices()
+    {
+        var (email, client) = await Login("PublicUser"); using var http = client;
+        var owner = await UserId(email); var foreign = await UserId(await database.UserAsync("PublicUser"));
+        var ownUrgent = await AddNeed(owner, "Egen hasteoppfølging");
+        var ownPast = await AddNeed(owner, "Eget passert tidspunkt");
+        var ownHigh = await AddNeed(owner, "Egen vanlig oppfølging");
+        var assigned = await AddNeed(owner, "Allerede dekket haster");
+        var resolved = await AddNeed(owner, "Avsluttet haster");
+        var other = await AddNeed(foreign, "Annen brukers haster");
+        var provider = await UserId(await database.UserAsync("ResourceProvider")); var resource = await AddResource(provider);
+        var now = PortalDisplay.NorwayNow;
+        await using var db = database.Context();
+        await db.Needs.Where(n => n.Id == ownUrgent.Id || n.Id == ownPast.Id || n.Id == assigned.Id || n.Id == resolved.Id || n.Id == other.Id).ExecuteUpdateAsync(u => u.SetProperty(n => n.Priority, "Urgent"));
+        await db.Needs.Where(n => n.CreatedByUserId == owner).ExecuteUpdateAsync(u => u.SetProperty(n => n.NeededAt, now.AddDays(1)));
+        await db.Needs.Where(n => n.Id == ownPast.Id).ExecuteUpdateAsync(u => u.SetProperty(n => n.NeededAt, now.AddDays(-1)));
+        await db.Needs.Where(n => n.Id == assigned.Id).ExecuteUpdateAsync(u => u.SetProperty(n => n.Status, NeedStatuses.Assigned).SetProperty(n => n.AssignedResourceId, resource.Id));
+        await db.Needs.Where(n => n.Id == resolved.Id).ExecuteUpdateAsync(u => u.SetProperty(n => n.Status, NeedStatuses.Resolved));
+        db.Notifications.AddRange(new PortalNotification { UserId=owner, Title="Egen ulest", Message="Bare til eieren" }, new PortalNotification { UserId=foreign, Title="HEMMELIG-ANNEN", Message="Ikke til denne brukeren" });
+        await db.SaveChangesAsync();
+        var html = WebUtility.HtmlDecode(await http.Client.GetStringAsync("/"));
+        Assert.Contains("3 udekkede behov", html); Assert.Contains("2 merket Haster", html); Assert.Contains("1 aktive tildelinger", html);
+        Assert.Contains("1 udekkede behov har passert", html); Assert.Contains("Eget passert tidspunkt", html);
+        Assert.DoesNotContain("Allerede dekket haster", html); Assert.DoesNotContain("Avsluttet haster", html); Assert.DoesNotContain("Annen brukers haster", html);
+        Assert.Contains("Egen ulest", html); Assert.DoesNotContain("HEMMELIG-ANNEN", html);
+        Assert.Contains("status=uncovered&mine=True", WebUtility.HtmlDecode(await http.Client.GetStringAsync("/Resource/Overview")));
+        Assert.Contains($"href=\"/Need/Matches/{ownUrgent.Id}\"", html);
+        Assert.True(html.IndexOf("Eget passert tidspunkt", StringComparison.Ordinal) < html.IndexOf("Egen vanlig oppfølging", StringComparison.Ordinal));
+        var all = WebUtility.HtmlDecode(await http.Client.GetStringAsync("/?scope=all"));
+        var uncovered = db.Needs.Where(n => n.AssignedResourceId == null && (n.Status == NeedStatuses.New || n.Status == NeedStatuses.UnderReview));
+        Assert.Contains($"{await uncovered.CountAsync()} udekkede behov", all);
+        Assert.Contains($"{await uncovered.CountAsync(n => n.Priority == "Urgent")} merket Haster", all);
+        Assert.Contains("Egen ulest", all); Assert.DoesNotContain("HEMMELIG-ANNEN", all);
+        var adminEmail = await database.UserAsync("Admin"); using var admin = new PortalHttp(database.Factory); await admin.LoginAsync(adminEmail);
+        var adminHtml = WebUtility.HtmlDecode(await admin.Client.GetStringAsync("/"));
+        Assert.Contains($"{await uncovered.CountAsync()} udekkede behov", adminHtml); Assert.DoesNotContain("Egen ulest", adminHtml); Assert.DoesNotContain("HEMMELIG-ANNEN", adminHtml);
+        Assert.Contains("status=uncovered&mine=False", WebUtility.HtmlDecode(await admin.Client.GetStringAsync("/Resource/Overview")));
+    }
+
+    [MariaDbFact]
+    public async Task Dashboard_followup_filters_preserve_scope_and_paging_and_match_permissions()
+    {
+        var (email, client) = await Login("PublicUser"); using var http = client; var owner = await UserId(email);
+        var type = "Oppfolging-" + Guid.NewGuid().ToString("N"); var foreign = await UserId(await database.UserAsync("PublicUser"));
+        for(var i=0;i<12;i++) await AddNeed(owner, type);
+        var other = await AddNeed(foreign, type); var resolved = await AddNeed(owner, type);
+        await using var db = database.Context(); var now = PortalDisplay.NorwayNow;
+        await db.Needs.Where(n => n.Type == type).ExecuteUpdateAsync(u => u.SetProperty(n => n.Priority, "Urgent").SetProperty(n => n.NeededAt, now.AddDays(-1)));
+        await db.Needs.Where(n => n.Id == resolved.Id).ExecuteUpdateAsync(u => u.SetProperty(n => n.Status, NeedStatuses.Resolved));
+        foreach(var filter in new[]{"uncovered","urgent","time-passed"})
+        {
+            var html = WebUtility.HtmlDecode(await http.Client.GetStringAsync($"/Need/Overview?q={type}&mine=true&status={filter}"));
+            Assert.Contains("<strong>12</strong> behov funnet",html); Assert.Contains($"value=\"{filter}\" selected",html);
+            Assert.Contains("page=2",html); Assert.Contains("mine=True",html); Assert.Contains($"status={filter}",html);
+            Assert.DoesNotContain($"href=\"/Need/Matches/{resolved.Id}\"",html);
+        }
+        var all = WebUtility.HtmlDecode(await http.Client.GetStringAsync($"/Need/Overview?q={type}&status=uncovered&page=2"));
+        Assert.Contains($"#{other.Id}",all); Assert.DoesNotContain($"href=\"/Need/Matches/{other.Id}\"",all);
+        Assert.Equal(HttpStatusCode.OK,(await http.Client.GetAsync($"/Need/Matches/{other.Id}")).StatusCode);
+        Denied(await http.Client.GetAsync($"/Need/Review/{other.Id}"));
+    }
+
+    [MariaDbFact]
+    public async Task Notification_filters_paginate_and_read_actions_never_touch_another_user()
+    {
+        var (email, client) = await Login(); using var http = client; var owner = await UserId(email);
+        var foreign = await UserId(await database.UserAsync("ResourceProvider")); await using var db = database.Context();
+        var notices=Enumerable.Range(0,21).Select(i=>new PortalNotification { UserId=owner, Title=$"Ulest-{i:D2}", Message="Egen beskjed" }).ToList();
+        var read=new PortalNotification { UserId=owner, Title="Allerede-lest", Message="Historikk", ReadAtUtc=DateTime.UtcNow };
+        var secret=new PortalNotification { UserId=foreign, Title="ANNENS-PRIVATE", Message="Kun annen bruker" };
+        db.Notifications.AddRange(notices); db.Notifications.AddRange(read,secret); await db.SaveChangesAsync();
+        var unread = await http.Client.GetStringAsync("/Notifications?filter=unread");
+        Assert.Contains("Ulest-20",unread); Assert.DoesNotContain("Allerede-lest",unread); Assert.DoesNotContain("ANNENS-PRIVATE",unread);
+        Assert.Contains("filter=unread",unread); Assert.Contains("page=2",unread);
+        var second=await http.Client.GetStringAsync("/Notifications?filter=unread&page=2"); Assert.Contains("Ulest-00",second); Assert.DoesNotContain("Ulest-20",second);
+        var readHtml=await http.Client.GetStringAsync("/Notifications?filter=read"); Assert.Contains("Allerede-lest",readHtml); Assert.DoesNotContain("Ulest-20",readHtml);
+        var result=await http.PostAsync("/Notifications/Read",new(){["id"]=notices[0].Id.ToString(),["filter"]="unread",["page"]="2"},"/Notifications?filter=unread&page=2");
+        Assert.Equal(HttpStatusCode.Redirect,result.StatusCode); Assert.Contains("filter=unread",result.Headers.Location!.ToString()); Assert.Contains("page=2",result.Headers.Location.ToString());
+        var clamped=await http.Client.GetStringAsync(result.Headers.Location); Assert.DoesNotContain("Ulest-00",clamped); Assert.Contains("Ulest-20",clamped);
+        Assert.Equal(HttpStatusCode.NotFound,(await http.PostAsync("/Notifications/Read",new(){["id"]=secret.Id.ToString()},"/Notifications")).StatusCode);
+        var allRead=await http.PostAsync("/Notifications/ReadAll",new(){["filter"]="unread"},"/Notifications"); Assert.Contains("filter=unread",allRead.Headers.Location!.ToString());
+        Assert.Equal(0,await db.Notifications.CountAsync(n=>n.UserId==owner && n.ReadAtUtc==null)); Assert.Null((await db.Notifications.AsNoTracking().SingleAsync(n=>n.Id==secret.Id)).ReadAtUtc);
+        Assert.Contains("Ingen uleste varsler",await http.Client.GetStringAsync("/Notifications?filter=unread"));
+    }
+
+    [MariaDbFact]
+    public async Task Notification_display_hides_legacy_contact_trailers_and_escapes_resource_previews()
+    {
+        var (email, client)=await Login(); using var http=client; var owner=await UserId(email);
+        var resource=await AddResource(owner); await using var db=database.Context();
+        await db.Resources.Where(r=>r.Id==resource.Id).ExecuteUpdateAsync(u=>u.SetProperty(r=>r.Description,"<script>alert('x')</script> Kapasitet oppgitt av eier"));
+        db.Notifications.Add(new PortalNotification { UserId=owner, Title="Ressurs tildelt", Message="Testressurs er tildelt behovet. Kontakt: Privat navn, +4798765432." }); await db.SaveChangesAsync();
+        foreach(var path in new[]{"/","/Notifications"}){var html=await http.Client.GetStringAsync(path); Assert.Contains("Testressurs er tildelt behovet.",html); Assert.DoesNotContain("Privat navn",html); Assert.DoesNotContain("+4798765432",html);}
+        var listing=await http.Client.GetStringAsync("/Resource/Overview"); Assert.DoesNotContain("<script>alert",listing); Assert.Contains("&lt;script&gt;",listing); Assert.Contains("Kapasitet oppgitt av eier",listing);
+    }
+
+    [MariaDbFact]
     public async Task Area_need_and_search_include_boundaries_cross_regions_and_recheck_assignment()
     {
         var (email, actor) = await Login("PublicUser"); using var http = actor;
@@ -487,7 +584,7 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
         Assert.Single(results, r => r == AllocationResult.Success);
         await using var db = database.Context(); var notices = await db.Notifications.AsNoTracking().Where(n => n.ResourceId == resource.Id).ToListAsync();
         Assert.Equal(2, notices.Count); var winner = await db.Needs.AsNoTracking().SingleAsync(n => n.AssignedResourceId == resource.Id);
-        Assert.All(notices, n => Assert.Equal(winner.Id, n.NeedId));
+        Assert.All(notices, n => { Assert.Equal(winner.Id, n.NeedId); Assert.DoesNotContain("Kontakt:", n.Message); Assert.DoesNotContain(resource.PhoneNumber, n.Message); });
         Assert.Equal(AllocationResult.Conflict, await new AllocationService(db).AssignAsync(winner.Id, resource.Id, owner, false));
         Assert.Equal(2, await db.Notifications.CountAsync(n => n.ResourceId == resource.Id));
         var detail = await provider.Client.GetStringAsync($"/Resource/Details/{resource.Id}"); Assert.Contains(winner.ContactName, detail); Assert.Contains(winner.PhoneNumber, System.Net.WebUtility.HtmlDecode(detail));

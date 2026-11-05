@@ -83,7 +83,7 @@ public class AllocationService(ApplicationDbContext context)
                 .SetProperty(item => item.Status, NeedStatuses.Assigned).SetProperty(item => item.Version, item => item.Version + 1));
         if (assigned != 1) return AllocationResult.Conflict; // Dispose ruller tilbake ressursendringen.
         context.AllocationEvents.Add(new AllocationEvent { NeedId = need.Id, ResourceId = resource.Id, ActorUserId = userId, Action = "Assigned", ResourceName = resource.Name });
-        AddNotices(need, resource, "Ressurs tildelt", $"{resource.Name} er tildelt behovet {need.Type} i {need.Region}, {need.NeededAt:dd.MM.yyyy HH:mm}. Kontakt: {need.ContactName}, {need.PhoneNumber}.");
+        AddNotices(need, resource, "Ressurs tildelt", $"{resource.Name} er tildelt behov #{need.Id}: {need.Type} i {need.Region}, {need.NeededAt:dd.MM.yyyy HH:mm}. Se tildelingen for kontakt og praktisk oppfølging.");
         await context.SaveChangesAsync();
         await transaction.CommitAsync();
         return AllocationResult.Success;
@@ -117,7 +117,7 @@ public class AllocationService(ApplicationDbContext context)
         if (changed != 1) return AllocationResult.Conflict;
         context.AllocationEvents.Add(new AllocationEvent { NeedId = need.Id, ResourceId = resource.Id, ActorUserId = userId, Action = resolve ? "Resolved" : "Released", ResourceName = resource.Name });
         AddNotices(need, resource, resolve ? "Behov løst" : "Ressurs frigitt",
-            $"{resource.Name} er frigitt fra behovet {need.Type} i {need.Region}. " + (resolve ? "Behovet er avsluttet." : "Behovet vurderes igjen."));
+            $"{resource.Name} er frigitt fra behov #{need.Id}: {need.Type} i {need.Region}. " + (resolve ? "Behovet er avsluttet." : "Behovet vurderes igjen."));
         await context.SaveChangesAsync();
         await transaction.CommitAsync();
         return AllocationResult.Success;
