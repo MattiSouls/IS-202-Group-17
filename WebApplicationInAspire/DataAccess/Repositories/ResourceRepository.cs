@@ -20,7 +20,10 @@ public class ResourceRepository(ApplicationDbContext context) : IResourceReposit
             && !context.Needs.Any(n => n.AssignedResourceId == r.Id && n.Status == NeedStatuses.Assigned));
         var regions = await query.Select(r => r.Region).Distinct().OrderBy(v => v).Take(200).ToListAsync();
         var types = await query.Select(r => r.Type).Distinct().OrderBy(v => v).Take(200).ToListAsync();
-        if (!string.IsNullOrWhiteSpace(filter.Region)) { var region = MatchingRules.Normalize(filter.Region); query = query.Where(r => r.Region.Trim().ToUpper() == region); }
+        if (filter.RejectResults) query = query.Where(r => false);
+        if (filter.Area is { } area) query = query.Where(r => r.Latitude >= area.South && r.Latitude <= area.North && r.Longitude >= area.West && r.Longitude <= area.East);
+        else if (filter.HasAreaInput) query = query.Where(r => false);
+        else if (!string.IsNullOrWhiteSpace(filter.Region)) { var region = MatchingRules.Normalize(filter.Region); query = query.Where(r => r.Region.Trim().ToUpper() == region); }
         if (!string.IsNullOrWhiteSpace(filter.Type)) { var type = MatchingRules.Normalize(filter.Type); query = query.Where(r => r.Type.Trim().ToUpper() == type); }
         if (!string.IsNullOrWhiteSpace(filter.Q)) { var term = filter.Q; query = query.Where(r => r.Name.Contains(term) || r.Type.Contains(term) || r.Region.Contains(term)); }
         if (!availableOnly && filter.Status == "assigned") query = query.Where(r => context.Needs.Any(n => n.AssignedResourceId == r.Id && n.Status == NeedStatuses.Assigned));

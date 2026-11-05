@@ -82,8 +82,34 @@ public class ResourceController : Controller
 
     /// <summary>Leverandører ser egne ressurser; offentlige brukere ser ledige tilbud med kjent tidsrom.</summary>
     [HttpGet]
-    public async Task<IActionResult> Overview(string? region, string? q = null, string? type = null, string? status = null, int page = 1)
-        => View(await BuildOverviewAsync(new ListFilter { Region = region, Q = q, Type = type, Status = status, Page = page }));
+    public async Task<IActionResult> Overview(string? region, string? q = null, string? type = null, string? status = null, int page = 1,
+        [FromQuery(Name = "AreaSouth")] double? areaSouth = null, [FromQuery(Name = "AreaWest")] double? areaWest = null,
+        [FromQuery(Name = "AreaNorth")] double? areaNorth = null, [FromQuery(Name = "AreaEast")] double? areaEast = null)
+    {
+        var filter = new ListFilter
+        {
+            Region = region,
+            Q = q,
+            Type = type,
+            Status = status,
+            Page = page,
+            AreaSouth = areaSouth,
+            AreaWest = areaWest,
+            AreaNorth = areaNorth,
+            AreaEast = areaEast
+        };
+        foreach (var error in filter.ValidateArea())
+            foreach (var member in error.MemberNames) ModelState.AddModelError(member, error.ErrorMessage!);
+        // Et ugyldig filter må ikke bli til et ufiltrert søk.
+        if (!ModelState.IsValid)
+        {
+            Response.StatusCode = 400;
+            ViewData["FormErrorHelp"] = "Søket er ikke utført. Rett områdegrensene; de andre filtrene dine er beholdt.";
+            filter.RejectResults = true;
+            return View(await BuildOverviewAsync(filter));
+        }
+        return View(await BuildOverviewAsync(filter));
+    }
 
     [HttpGet]
     public async Task<IActionResult> RegionalList(string? region)

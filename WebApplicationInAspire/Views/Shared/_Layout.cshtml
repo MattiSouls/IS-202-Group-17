@@ -14,43 +14,40 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/workspace.css" asp-append-version="true" />
 </head>
-<body>
+<body class="@(loggedIn ? "" : "public-site")">
 <a class="skip-link" href="#main-content">Hopp til innhold</a>
+@if(loggedIn)
+{
 <aside class="offcanvas-lg offcanvas-start app-sidebar" tabindex="-1" id="appNavigation" aria-label="Hovednavigasjon">
     <div class="offcanvas-header"><span class="brand-name">Ressursportalen</span><button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#appNavigation" aria-label="Lukk meny"></button></div>
     <a asp-controller="Home" asp-action="Index" class="app-brand"><span class="brand-symbol" aria-hidden="true">+</span><span>Ressursportalen<small>Felles oversikt. Bedre beredskap.</small></span></a>
     <div class="workspace-label">ARBEIDSOMRÅDE</div>
     <nav aria-label="Sider">
         <a asp-controller="Home" asp-action="Index" class="nav-entry @(section == "Home" && action == "Index" ? "active" : "")" aria-current="@(section == "Home" && action == "Index" ? "page" : null)"><span aria-hidden="true">▦</span> Oversikt</a>
-        @if (loggedIn)
-        {
-            <a asp-controller="Resource" asp-action="Overview" class="nav-entry @(section == "Resource" ? "active" : "")" aria-current="@(section == "Resource" ? "page" : null)"><span aria-hidden="true">▤</span> @(isPublic ? "Finn ressurser" : "Mine ressurser")</a>
+        <a asp-controller="Resource" asp-action="Overview" class="nav-entry @(section == "Resource" ? "active" : "")" aria-current="@(section == "Resource" ? "page" : null)"><span aria-hidden="true">▤</span> @(isPublic ? "Finn ressurser" : "Mine ressurser")</a>
             @if (isPublic)
             { <a asp-controller="Need" asp-action="Overview" class="nav-entry @(section == "Need" ? "active" : "")" aria-current="@(section == "Need" ? "page" : null)"><span aria-hidden="true">⚑</span> Behov og tildelinger</a> }
             <a asp-controller="Notifications" asp-action="Index" class="nav-entry @(section == "Notifications" ? "active" : "")" aria-current="@(section == "Notifications" ? "page" : null)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg> Varsler</a>
-        }
-        else
-        {
-            <a asp-controller="Need" asp-action="Register" class="nav-entry"><span aria-hidden="true">＋</span> Registrer behov</a>
-            <a asp-controller="Account" asp-action="Login" class="nav-entry">Logg inn</a>
-            <a asp-controller="Account" asp-action="Register" class="nav-entry">Registrer leverandør</a>
-        }
     </nav>
     <div class="sidebar-bottom"><p class="eyebrow">GODT Å VITE</p><p>Kontakt leverandøren for å avtale praktisk bruk. Tilgjengelighet oppdateres av eieren.</p><a asp-controller="Home" asp-action="Privacy">Personvern og databruk</a></div>
 </aside>
+}
 <div class="app-workspace">
+@if(!loggedIn)
+{
+<header class="public-header"><a asp-controller="Home" asp-action="Index" class="app-brand"><span class="brand-symbol" aria-hidden="true">+</span><span>Ressursportalen<small>Felles oversikt. Bedre beredskap.</small></span></a><nav aria-label="Hovednavigasjon"><a asp-controller="Need" asp-action="Register">Registrer behov</a><a asp-controller="Account" asp-action="Register">Opprett leverandørkonto</a><a asp-controller="Account" asp-action="Login" class="btn btn-primary">Logg inn</a></nav></header>
+}
+else
+{
     <header class="topbar">
         <div class="d-flex align-items-center gap-3"><button class="btn btn-quiet d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#appNavigation" aria-controls="appNavigation" aria-label="Åpne meny">☰</button><span class="topbar-title">Beredskap / <strong>@ViewData["Title"]</strong></span></div>
         <div class="topbar-account">
-            @if (loggedIn)
-            {
-                @await Component.InvokeAsync("NotificationCount")
+            @await Component.InvokeAsync("NotificationCount")
                 <span class="role-chip">@role</span>
                 <details class="account-menu"><summary aria-label="Åpne kontomeny">Konto</summary><div><p>@User.Identity?.Name</p><form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="btn btn-secondary w-100">Logg ut</button></form></div></details>
-            }
-            else { <a asp-controller="Account" asp-action="Login" class="btn btn-secondary">Logg inn</a> }
         </div>
     </header>
+}
     <main id="main-content" tabindex="-1" class="workspace-main">
         @if (TempData["SuccessMessage"] is string success) { <div class="feedback success" role="status"><strong>Utført.</strong> @success</div> }
         @if (TempData["ErrorMessage"] is string error) { <div class="feedback warning" role="alert">@error</div> }

@@ -8,7 +8,7 @@ Ved oppgradering av et miljø med viktige data:
 
 1. Noter gjeldende commit og databaseversjon. Stans nye brukerendringer under oppgraderingen.
 2. Ta en verifisert MariaDB-backup før du starter ny kode. Ta også vare på Data Protection-volumet, med samme tilgangsbeskyttelse som andre hemmeligheter.
-3. Kjør oppgraderingen i et separat miljø først. De nye migrasjonene legger til varsler, tildelingshistorikk, registreringsnøkler, versjonsfelt og valgfrie behovskoordinater. De fyller ikke inn oppdiktede koordinater eller tidsrom for eldre data.
+3. Kjør oppgraderingen i et separat miljø først. De nye migrasjonene legger til varsler, tildelingshistorikk, registreringsnøkler, versjonsfelt, valgfrie behovskoordinater og fire nullable områdegrenser. NeedSearchAreas legger også til en indeks på ressurskoordinater. Eldre behov beholder region-/punktmatchingen. De fyller ikke inn oppdiktede koordinater eller tidsrom for eldre data.
 4. Kjør `docker compose up -d --build --wait`, kontroller `docker compose ps` og `docker compose logs --tail 100 web mariadb` lokalt. Ikke del rå logger med passord eller kontaktdata.
 5. Prøv innlogging og én komplett registrering/tildeling/frigivelse med avtalte testdata. Bekreft mottakernes varsler og at eldre data er beholdt.
 

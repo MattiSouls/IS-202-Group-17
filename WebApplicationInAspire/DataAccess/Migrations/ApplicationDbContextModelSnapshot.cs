@@ -267,6 +267,18 @@ namespace WebApplicationInAspire.DataAccess.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<double?>("AreaEast")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("AreaNorth")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("AreaSouth")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("AreaWest")
+                        .HasColumnType("double");
+
                     b.Property<int?>("AssignedResourceId")
                         .HasColumnType("int");
 
@@ -453,6 +465,8 @@ namespace WebApplicationInAspire.DataAccess.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Latitude", "Longitude");
 
                     b.HasIndex("OwnerId", "CreationToken")
                         .IsUnique();

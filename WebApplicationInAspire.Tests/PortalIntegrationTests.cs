@@ -66,6 +66,77 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
     }
 
     [MariaDbFact]
+    public async Task Area_need_and_search_include_boundaries_cross_regions_and_recheck_assignment()
+    {
+        var (email, actor) = await Login("PublicUser"); using var http = actor;
+        var (providerEmail, providerClient) = await Login(); using var providerHttp = providerClient;
+        var provider = await UserId(providerEmail); var other = await UserId(await database.UserAsync("ResourceProvider"));
+        var type = "Area-" + Guid.NewGuid().ToString("N");
+        var inside = await AddResource(provider, type); var edge = await AddResource(provider, type); var outside = await AddResource(provider, type); var privateResource = await AddResource(other, type);
+        await using var db = database.Context();
+        await db.Resources.Where(r => r.Id == inside.Id).ExecuteUpdateAsync(u => u.SetProperty(r => r.Region, "Rogaland").SetProperty(r => r.Latitude, 58.5).SetProperty(r => r.Longitude, 7.5));
+        await db.Resources.Where(r => r.Id == edge.Id).ExecuteUpdateAsync(u => u.SetProperty(r => r.Latitude, 58d).SetProperty(r => r.Longitude, 7d));
+        await db.Resources.Where(r => r.Id == outside.Id).ExecuteUpdateAsync(u => u.SetProperty(r => r.Latitude, 59.5));
+        var fields = new Dictionary<string, string> { ["Type"] = type, ["Region"] = "Agder", ["NeededAt"] = "2026-11-06T12:00", ["Priority"] = "High", ["ContactName"] = "Test", ["PhoneNumber"] = "99999999", ["AreaSouth"] = "58", ["AreaWest"] = "7", ["AreaNorth"] = "59", ["AreaEast"] = "8" };
+        Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync("/Need/Register", fields, "/Need/Register")).StatusCode);
+        var need = await db.Needs.AsNoTracking().SingleAsync(n => n.Type == type);
+        Assert.Equal(58, need.AreaSouth); Assert.Equal(8, need.AreaEast); Assert.Null(need.Latitude);
+        var service = new AllocationService(db); var matches = await service.FindMatchesAsync(need);
+        Assert.Contains(matches, r => r.Id == inside.Id); Assert.Contains(matches, r => r.Id == edge.Id); Assert.DoesNotContain(matches, r => r.Id == outside.Id);
+        var query = $"/Resource/Overview?type={type}&region=Agder&areaSouth=58&areaWest=7&areaNorth=59&areaEast=8";
+        var own = await providerHttp.Client.GetStringAsync(query);
+        Assert.Contains(inside.Name, own); Assert.Contains(edge.Name, own); Assert.DoesNotContain(outside.Name, own); Assert.DoesNotContain(privateResource.Name, own);
+        Assert.Contains("Kartområde aktivt", own); Assert.DoesNotContain("Last ned hele regionen", own);
+        var publicSearch = await http.Client.GetStringAsync(query); Assert.Contains(privateResource.Name, publicSearch);
+        Assert.Equal(AllocationResult.Conflict, await service.AssignAsync(need.Id, outside.Id, need.CreatedByUserId, false, 0, 0));
+        Assert.Equal(AllocationResult.Success, await service.AssignAsync(need.Id, inside.Id, need.CreatedByUserId, false, 0, 0));
+        Assert.Equal(AllocationResult.Success, await service.ReleaseAsync(need.Id, need.CreatedByUserId, false, false, 1));
+        need = await db.Needs.AsNoTracking().SingleAsync(n => n.Id == need.Id);
+        need.AreaSouth = 60; need.AreaNorth = 61;
+        Assert.True(await new WebApplicationInAspire.DataAccess.Repositories.NeedRepository(db).EditAsync(need));
+        Assert.Empty(await service.FindMatchesAsync(need));
+        Assert.Equal(AllocationResult.Conflict, await service.AssignAsync(need.Id, edge.Id, need.CreatedByUserId, false, 2, 0));
+        var editHtml = await http.Client.GetStringAsync($"/Need/Edit/{need.Id}"); Assert.Contains("value=\"60\"", editHtml);
+    }
+
+    [MariaDbFact]
+    public async Task Area_search_preserves_bounds_pagination_and_filters_after_a_binding_error()
+    {
+        var (email, actor) = await Login(); using var http = actor;
+        var owner = await UserId(email); var type = "Pager-" + Guid.NewGuid().ToString("N");
+        await using var db = database.Context();
+        db.Resources.AddRange(Enumerable.Range(0, 20).Select(i => new Resource { Name = $"Områdepumpe {i:D2}", Type = type, Region = "Agder", OwnerId = owner, ContactName = "Test", PhoneNumber = "99999999", Latitude = i < 15 ? 58.5 : 60, Longitude = 7.5, AvailableFrom = new DateTime(2026, 11, 1), AvailableUntil = new DateTime(2026, 11, 30) }));
+        await db.SaveChangesAsync();
+        var query = $"/Resource/Overview?type={type}&region=Agder&q=Omr&status=offered&areaSouth=58&areaWest=7&areaNorth=59&areaEast=8";
+        var first = await http.Client.GetStringAsync(query);
+        Assert.Contains("areaSouth=58", first); Assert.Contains("areaEast=8", first); Assert.Contains("page=2", first);
+        var second = await http.Client.GetStringAsync(query + "&page=2");
+        Assert.Contains("Omr&#xE5;depumpe 14", second); Assert.DoesNotContain("Omr&#xE5;depumpe 15", second);
+        var bad = await http.Client.GetAsync(query.Replace("areaSouth=58", "areaSouth=bad"));
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode); var html = await bad.Content.ReadAsStringAsync();
+        Assert.Contains("href=\"#AreaSouth\"", html); Assert.Contains($"value=\"{type}\" selected", html);
+        Assert.Contains("value=\"Agder\" selected", html); Assert.Contains("value=\"offered\" selected", html); Assert.Contains("value=\"Omr\"", html);
+        Assert.DoesNotContain("class=\"resource-table\"", html);
+    }
+
+    [MariaDbFact]
+    public async Task Invalid_area_requests_show_errors_and_never_broaden_to_an_unfiltered_search()
+    {
+        var (_, actor) = await Login("PublicUser"); using var http = actor;
+        var type = "BadArea-" + Guid.NewGuid().ToString("N");
+        var fields = new Dictionary<string, string> { ["Type"] = type, ["Region"] = "Agder", ["NeededAt"] = "2026-11-06T12:00", ["Priority"] = "High", ["ContactName"] = "Test", ["PhoneNumber"] = "99999999", ["AreaSouth"] = "58" };
+        var response = await http.PostAsync("/Need/Register", fields, "/Need/Register");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode); Assert.Contains("fire gyldige", await response.Content.ReadAsStringAsync());
+        await using var db = database.Context(); Assert.False(await db.Needs.AnyAsync(n => n.Type == type));
+        foreach (var query in new[] { "areaSouth=58", "areaSouth=bad", "areaSouth=59&areaWest=7&areaNorth=58&areaEast=8", "areaSouth=NaN&areaWest=7&areaNorth=59&areaEast=8" })
+        {
+            var search = await http.Client.GetAsync("/Resource/Overview?" + query);
+            Assert.Equal(HttpStatusCode.BadRequest, search.StatusCode);
+            Assert.DoesNotContain("class=\"resource-table\"", await search.Content.ReadAsStringAsync());
+        }
+    }
+
+    [MariaDbFact]
     public async Task Landing_exposes_need_registration_and_login_returns_public_user_to_the_form()
     {
         using var http = new PortalHttp(database.Factory);
@@ -76,7 +147,9 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
         var email = await database.UserAsync("PublicUser");
         var response = await http.PostAsync("/Account/Login", new()
         {
-            ["Email"] = email, ["Password"] = PortalHttp.Password, ["ReturnUrl"] = "/Need/Register"
+            ["Email"] = email,
+            ["Password"] = PortalHttp.Password,
+            ["ReturnUrl"] = "/Need/Register"
         }, "/Account/Login?returnUrl=%2FNeed%2FRegister");
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal("/Need/Register", response.Headers.Location!.ToString());

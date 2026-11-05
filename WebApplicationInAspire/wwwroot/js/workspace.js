@@ -25,6 +25,7 @@
     });
     const originals = new Map();
     document.querySelectorAll('form[method="post"]').forEach(form => form.addEventListener('submit', event => {
+        if (event.defaultPrevented) return;
         if (window.jQuery && $(form).data('validator') && !$(form).valid()) return;
         if (form.dataset.submitting) { event.preventDefault(); return; }
         form.dataset.submitting = 'true'; form.setAttribute('aria-busy', 'true');

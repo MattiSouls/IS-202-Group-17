@@ -4,7 +4,7 @@ ASP.NET Core MVC-applikasjon for offentlige behov og tilbudte ressurser ved kris
 
 ## Oppstart med Docker
 
-Krever Git og Docker Desktop med Linux-containere. .NET 10 SDK trengs bare når du bygger eller tester utenfor Docker. Node.js 22+ brukes til de fire JavaScript-testene.
+Krever Git og Docker Desktop med Linux-containere. .NET 10 SDK trengs bare når du bygger eller tester utenfor Docker. Node.js 22+ brukes til JavaScript-testene.
 
 ```powershell
 git clone https://github.com/MattiSouls/IS-202-Group-17.git
@@ -64,7 +64,7 @@ Tidspunkter for både behov og ressurs oppgis som **norsk lokal tid**. Fra/til m
 
 ### Matching og status
 
-Treff krever samme type og region (store/små bokstaver og ytre mellomrom ignoreres), `IsAvailable=true`, ingen aktiv tildeling, og at `NeededAt` ligger innenfor ressursens tidsrom, inkludert endepunktene. Når behovet har koordinater, sorteres treffene etter luftlinje i databasen før siden hentes. Uten behovskoordinater brukes navn/id; avstand er ikke reisetid. Tildeling kontrollerer vilkårene på nytt på serveren; en gammel treffliste gir ikke rett til å ta en ressurs som ikke lenger er ledig.
+Treff krever samme type og enten samme region eller registrert ressursplassering innenfor behovets valgte kartområde (store/små bokstaver og ytre mellomrom ignoreres i tekstfeltene), `IsAvailable=true`, ingen aktiv tildeling, og at `NeededAt` ligger innenfor ressursens tidsrom, inkludert endepunktene. Når behovet har et punkt eller kartområde, sorteres treffene etter luftlinje fra punktet eller områdets midtpunkt i databasen før siden hentes. Uten punkt eller område brukes navn/id; avstand er ikke reisetid. Tildeling kontrollerer vilkårene på nytt på serveren; en gammel treffliste gir ikke rett til å ta en ressurs som ikke lenger er ledig.
 
 - Ny (`New`) eller Vurderes (`UnderReview`) kan tildeles en passende ressurs.
 - Tildeling setter behovet til Tildelt (`Assigned`) og ressursen utilgjengelig i én MariaDB-transaksjon.
@@ -73,6 +73,14 @@ Treff krever samme type og region (store/små bokstaver og ytre mellomrom ignore
 - En tildelt ressurs kan ikke redigeres eller slettes før den er frigitt. Ved samtidighetskonflikt vises HTTP 409 og brukeren må oppdatere oversikten.
 
 Ressurser og behov vises med søk, filtre og 10 rader per side. Oversikten skiller mellom tilgjengelig nå, senere, utløpt tidsrom, pauset og tildelt. Velg en region før utskrift eller CSV-eksport. Utskriften advarer når den avkortes til 500 rader; CSV strømmer hele regionlisten og nøytraliserer regnearkformler. Den følger samme rolletilgang som oversikten. Tilgjengelighet er eierens opplysning og bekrefter ikke at ressursen faktisk finnes på stedet; kontakt eieren ved bruk.
+
+### Punkt og kartområde
+
+På behovsskjemaet kan du velge ett punkt eller et rektangel. Åpne kartvalget, velg **Marker område** og klikk/trykk på to motsatte hjørner. **Avbryt markering** beholder forrige valg; **Fjern kartvalg** fjerner avgrensningen. En uferdig tegning kan ikke sendes. Koordinatfeltene gir samme funksjon uten mus eller karttjeneste. Fire gyldige grenser kreves for et område; punkt og område kan ikke lagres samtidig.
+
+Med et behovsområde matcher systemet ressurser med registrert punkt innenfor grensene, inkludert kanten. Området erstatter fylkes-/regionmatchingen og kan krysse regiongrenser. Ressurskategori, tidsrom, ledighet og rettigheter kontrolleres som før, også i den atomiske tildelingen. Luftlinje måles fra områdets midtpunkt, ikke fra nærmeste grense. Dette er ikke et leveringsområde eller et løfte om at ressursen kan brukes overalt i rektangelet.
+
+I ressursoversikten kan du avgrense søket på samme måte. Bruk **Søk med kartvalget** etter markering. Områdegrensene beholdes ved sidebytte og retur fra detaljer. Ved ugyldig område vises feil og ingen resultater; andre filtre beholdes. Fjern kartvalget for å bruke regionfilteret igjen. Områdevalg er et rektangel, ikke en vilkårlig polygon eller kommunegrense. Kryssing av datolinjen støttes ikke. Regional utskrift/CSV er skjult mens et kartområde er aktivt, slik at en hel region ikke forveksles med det valgte området.
 
 ### Arbeidsflate, varsler og feilvern
 
@@ -117,7 +125,7 @@ Tildeling låser/oppdaterer ressursen før behovet. Bare én forespørsel kan ta
 | Offentlige behov, status, matching og regional liste | NeedController, AllocationService, RegionalList | Need_HTTP_flow, Matching_honors_period, samtidighetstestene og Public_and_regional_overview |
 | Ressursens tidspunkt/frister | AvailableFrom/AvailableUntil i modell/skjema/database/matching | ValidationTests, Invalid_period og Matching_honors_period |
 | Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Nettleserkontroll av smal mobilvisning; reell person-/mobiltest gjenstår |
-| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 56 .NET + 4 JavaScript bestått lokalt; personstudien er ikke utført her |
+| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 73 .NET + 10 JavaScript bestått lokalt; personstudien er ikke utført her |
 | Drift, arkitektur, kode- og KI-dokumentasjon | Denne README-en og kommentarer ved sentral kode | Sammenhold kjøreinstruksjoner, testnavn og faktisk kildekode; gruppa kontrollerer egen KI-beskrivelse |
 
 ### Sikkerhet
@@ -134,7 +142,7 @@ Tofaktor er utelatt etter foreleserens avklaring, formidlet av gruppa 5. novembe
 dotnet restore WebApplicationInAspire.slnx --locked-mode
 dotnet build WebApplicationInAspire.slnx --configuration Release --no-restore
 dotnet test WebApplicationInAspire.Tests --configuration Release --no-build --filter "Category!=Integration"
-node --test WebApplicationInAspire.Tests/resource-position.test.cjs
+node --test WebApplicationInAspire.Tests/resource-position.test.cjs WebApplicationInAspire.Tests/area-picker.test.cjs
 ```
 
 ### HTTP-/system-/sikkerhetstester mot isolert MariaDB
@@ -151,7 +159,7 @@ docker compose -p is202-tests -f compose.tests.yaml down
 
 På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECTION_STRING="Server=127.0.0.1;Port=43325;User ID=root;Password=$TEST_DB_PASSWORD;Database=is202_test;"`. Når variabelen ikke er satt, rapporteres integrasjonstestene som **Skipped**, ikke Bestått. CI setter variabelen og kjører alle testene mot en MariaDB-service. Build og test bruker samme Release-konfigurasjon. Testresultater lagres som TRX-artifact i GitHub Actions; Docker-imaget bygges også.
 
-**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **56/56 .NET-tester og 4/4 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
+**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **73/73 .NET-tester og 10/10 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
 
 | Testområde / testnavn | Steg og forventning | Faktisk lokalt resultat |
 |---|---|---|
@@ -166,11 +174,11 @@ På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECT
 | `Matching_honors_period_boundaries_and_rejects_forged_out_of_period_assignment` | Test start/sluttgrense og tilbud som slutter for tidlig; feil tidsrom kan ikke tildeles med direkte kall. | Bestått |
 | `Concurrent_needs...`, `Same_need_claim...` | To behov konkurrerer om én ressurs og to ressurser om ett behov; nøyaktig én vinner, tapende endring rulles tilbake, tildelt ressurs kan ikke endres/slettes. | Bestått |
 | `Data_survives_new_application_host...`, `Upgrade_from_previous_release...` | Start ny appinstans og oppgrader tidligere migrasjon med eldre ressurs; bevar data og la ukjente datoer være null. | Bestått |
-| `resource-position.test.cjs` (4) | Manglende Leaflet, kartflisfeil, manuelle koordinater og klikk i sperret skjema. | Bestått |
+| `resource-position.test.cjs` (4), `area-picker.test.cjs` (6) | Kartbortfall, manuelle koordinater, sperret skjema, to hjørner, avbrutt/ufullstendig markering, punktbytte og bevart område ved flisfeil. Komponenttester uten faktisk nettleser. | Bestått |
 
 Nye integrasjonstester dekker også doble registreringskall, utdaterte skjemaer, private varsler, SQL-sortert avstand, behovsredigering, 10 000 ressurser/5 000 behov, gammel tildelingsbekreftelse, redigering samtidig med tildeling, komplett CSV-eksport/eierskap/formelvern og sikkerhetsheadere/tilgjengelige serverfeil. Datamengdetesten dokumenterer avgrenset sidestørrelse, ikke et løfte om et bestemt antall samtidige brukere.
 
-Nettleserkontroll 5. november 2026 med syntetiske data: matching, bekreftelse og tildeling, status/historikk, leverandørens varsel og kontaktvisning, markering som lest, søk og kart, tomt registreringsskjema med lenkede feil og smal mobilvisning. Automatisert kontroll er ikke en personstudie eller full tilgjengelighetsrevisjon.
+Nettleserkontroll 5. november 2026 med syntetiske data: matching, bekreftelse og tildeling, status/historikk, leverandørens varsel og kontaktvisning, markering som lest, søk og kart, tomt registreringsskjema med lenkede feil og smal mobilvisning. Automatisert kontroll er ikke en personstudie eller full tilgjengelighetsrevisjon. Denne nettleserkontrollen gjaldt før den nye offentlige toppmenyen og områdevelgeren. Visuell kontroll av disse er foreløpig ikke utført fordi nettlesertilgang ble deaktivert i Work; se UX-VERIFISERING.md.
 
 ### Brukervennlighetstest - må utføres av gruppa
 

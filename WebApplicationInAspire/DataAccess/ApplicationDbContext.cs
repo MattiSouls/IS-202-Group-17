@@ -25,6 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             resource.Property(item => item.Version).IsConcurrencyToken();
             resource.HasIndex(item => new { item.OwnerId, item.CreationToken }).IsUnique();
             resource.HasIndex(item => new { item.Region, item.Type });
+            resource.HasIndex(item => new { item.Latitude, item.Longitude });
             resource.Property(item => item.OwnerId).HasMaxLength(255);
             resource.Property(item => item.CreatedAtUtc).HasColumnType("datetime(6)");
             resource.Property(item => item.AvailableFrom).HasColumnType("datetime(6)");

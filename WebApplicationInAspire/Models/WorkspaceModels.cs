@@ -1,9 +1,12 @@
 using WebApplicationInAspire.Models.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace WebApplicationInAspire.Models;
 
-public class ListFilter
+public class ListFilter : SpatialSelection, IValidatableObject
 {
+    internal bool RejectResults { get; set; }
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) => ValidateArea();
     public string? Q { get; set; }
     public string? Region { get; set; }
     public string? Type { get; set; }

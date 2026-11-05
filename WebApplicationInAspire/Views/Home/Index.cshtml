@@ -8,12 +8,12 @@
             <div class="hero-copy">
                 <p class="hero-kicker">SAMHANDLING I BEREDSKAP</p>
                 <h1>Riktig ressurs.<br/><span>På riktig sted.</span></h1>
-                <p class="hero-description">Samle ressursene, meld inn behov og finn frem til hverandre. Én felles oversikt når det gjelder.</p>
+                <p class="hero-description">Offentlige aktører melder inn beredskapsbehov. Bedrifter, organisasjoner og frivillige tilbyr ressurser som pumper, aggregater og transport.</p>
                 <div class="actions hero-actions">
                     <a asp-controller="Need" asp-action="Register" class="btn btn-need">Registrer behov →</a>
-                    <a asp-controller="Resource" asp-action="Register" class="btn btn-hero-outline">Tilby en ressurs</a>
+                    <a asp-controller="Resource" asp-action="Register" class="btn btn-hero-outline">Registrer ressurs</a>
                 </div>
-                <p class="hero-access">Logg inn for å fortsette. Behov registreres av offentlige aktører.</p>
+                <p class="hero-access">Begge handlingene krever innlogging. Ny leverandør? Opprett konto under. Offentlige aktører får tilgang fra portalens administrator.</p>
             </div>
             <div class="hero-visual" aria-hidden="true">
                 <div class="connection-map">
@@ -31,28 +31,28 @@
                     <span class="map-tag map-tag-need">Behov</span>
                     <span class="map-tag map-tag-resource">Ressurs</span>
                 </div>
-                <div class="hero-connection"><span>Behov</span><span>→</span><span>Ressurs</span><span>→</span><strong>Samhandling</strong></div>
+                <div class="hero-connection"><span>Registrer behov</span><span>→</span><span>Finn ressurs</span><span>→</span><strong>Avtal bruk</strong></div>
             </div>
         </div>
         <div class="landing-grid">
             <article class="panel landing-card needs-card">
                 <span class="landing-step">01</span><p class="eyebrow">FOR OFFENTLIGE AKTØRER</p>
-                <h2>Hva trenger dere?</h2><p>Registrer hva, hvor og når. Finn tilbud som passer behovet.</p>
-                <a asp-controller="Need" asp-action="Register">Registrer et behov →</a>
+                <h2>Hva trenger dere?</h2><p>Har dere offentlig konto? Logg inn og registrer hva, hvor og når. Mangler dere tilgang, kontakt portalens administrator.</p>
+                <a asp-controller="Need" asp-action="Register">Registrer behov →</a>
             </article>
             <article class="panel landing-card resources-card">
                 <span class="landing-step">02</span><p class="eyebrow">FOR RESSURSLEVERANDØRER</p>
-                <h2>Hva kan dere bidra med?</h2><p>Del ressurser med posisjon, tidsrom og riktig kontaktperson.</p>
-                <a asp-controller="Resource" asp-action="Register">Registrer en ressurs →</a>
+                <h2>Hva kan dere bidra med?</h2><p>Har du leverandørkonto? Logg inn og registrer tilbudet. Bedrifter, organisasjoner og frivillige kan opprette konto.</p>
+                <a asp-controller="Resource" asp-action="Register">Registrer ressurs →</a>
             </article>
             <article class="panel landing-card followup-card">
                 <span class="landing-step">03</span><p class="eyebrow">FELLES OPPFØLGING</p>
                 <h2>Følg med hele veien</h2><p>Se tildelinger og varsler i portalen, og avtal praktisk bruk direkte.</p>
-                <a asp-controller="Account" asp-action="Login">Logg inn til oversikten →</a>
+                <a asp-controller="Account" asp-action="Login">Logg inn →</a>
             </article>
         </div>
         <div class="landing-access">
-            <p><strong>Ny ressursleverandør?</strong> <a asp-controller="Account" asp-action="Register">Opprett en leverandørkonto</a>.</p>
+            <p><strong>Ny ressursleverandør?</strong> <a asp-controller="Account" asp-action="Register">Opprett leverandørkonto</a>.</p>
             <p>Offentlige brukerkontoer opprettes av portalens administrator.</p>
         </div>
     </section>
@@ -64,6 +64,6 @@ else{
 <a class="stat-card" asp-controller="@(Model.IsPublic?"Need":"Resource")" asp-action="Overview" asp-route-status="@(Model.IsPublic?"Assigned":"assigned")"><span>Aktive tildelinger</span><strong>@Model.Assigned</strong><small>Se tildelinger →</small></a><a class="stat-card" asp-controller="Notifications" asp-action="Index"><span>Uleste varsler</span><strong>@Model.Unread</strong><small>Åpne varslene →</small></a></div>
 <div class="content-grid"><section class="panel"><div class="panel-heading"><h2>@(Model.IsPublic?"Behov som trenger oppfølging":"Ditt neste steg")</h2>@if(Model.IsPublic){<a asp-controller="Need" asp-action="Overview">Vis alle</a>}</div>
 @if(Model.IsPublic){@if(Model.Upcoming.Count==0){<div class="empty-state"><h2>Ingen åpne behov</h2><p>Registrer et behov når dere trenger en ressurs.</p></div>}else{<div class="task-list">@foreach(var need in Model.Upcoming){<article class="task-item"><div><h3>@need.Type <span class="status-pill">@PortalDisplay.Status(need.Status)</span></h3><p>@need.Region · @need.NeededAt.ToString("dd.MM.yyyy HH:mm") · @PortalDisplay.Priority(need.Priority) prioritet</p></div><a asp-controller="Need" asp-action="Details" asp-route-id="@need.Id" class="btn btn-secondary btn-sm">Åpne behov →</a></article>}</div>}}
-else{<div class="quick-start"><h2>Er tilgjengeligheten fortsatt riktig?</h2><p>Kontroller tidsrom og kontaktinformasjon. Når en ressurs tildeles, får du et varsel med hvem du skal kontakte.</p><a asp-controller="Resource" asp-action="Overview" class="btn btn-primary">Se mine ressurser</a></div><p class="muted">Offentlige aktører finner tilbudene dine gjennom matching. Ressursen må ha riktig kategori, region og tidsrom.</p>}
+else{<div class="quick-start"><h2>Er tilgjengeligheten fortsatt riktig?</h2><p>Kontroller tidsrom og kontaktinformasjon. Når en ressurs tildeles, får du et varsel med hvem du skal kontakte.</p><a asp-controller="Resource" asp-action="Overview" class="btn btn-primary">Se mine ressurser</a></div><p class="muted">Offentlige aktører finner tilbudene dine gjennom matching. Ressursens kategori, plassering og tidsrom avgjør hvilke behov den passer til.</p>}
 </section><aside class="panel"><div class="panel-heading"><h2>Siste varsler</h2><a asp-controller="Notifications" asp-action="Index">Vis alle</a></div>@if(Model.Recent.Count==0){<p class="muted">Ingen varsler ennå. Tildelinger og frigivelser vises her.</p>}else{@foreach(var notice in Model.Recent){<article class="notice-item"><h3>@notice.Title</h3><p>@notice.Message</p></article>}}</aside></div>
 }

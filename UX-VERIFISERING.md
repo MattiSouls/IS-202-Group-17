@@ -7,7 +7,7 @@ Endringen bygger på main og beholder rollefordelingen: leverandør eier ressurs
 | Problem | Konkret valg | Kontroll |
 |---|---|---|
 | For mange ressurser samtidig | SQL-paginering med 10 rader, søk og filtre; detaljer åpnes separat; kart skjules bak en utvidbar seksjon. | Test med 10 000 ressurser og 5 000 behov; sidestørrelse og HTML-mengde kontrolleres. Dette er en datamengdetest, ikke en måling av samtidige brukere. |
-| Uklare treff | Samme kategori, region og dekkende tidsrom er obligatorisk. Treff sorteres etter luftlinje når behovet har koordinater, ellers navn/id. | MariaDB-test av rekkefølge og tidsgrenser; fire kriterier vises på hvert treff. |
+| Uklare treff | Samme kategori, dekkende tidsrom og enten region eller valgt kartområde er obligatorisk. Treff sorteres etter luftlinje fra behovspunktet eller områdets midtpunkt, ellers navn/id. | MariaDB-test av rekkefølge og tidsgrenser; fire kriterier vises på hvert treff. |
 | Feil ressurs blir valgt | En bekreftelse viser behov, tidspunkt, ressurs og kontakt før POST. | Gammel versjon gir konflikt; ingen GET endrer tildelingen. |
 | Uklart resultat | Bekreftelse, status, varsel og tildelingshistorikk lagres. | Varsler og historikk lagres i samme transaksjon som tildelingen. Tapende samtidige kall oppretter ingen beskjed. |
 | Vanskelig feilretting | Navngitte felt, obligatoriske felt merket *, lenket feiloppsummering og synlig fokus. | Serverfeil testes via HTTP; klientfeil og mobilmeny kontrolleres i nettleser. |
@@ -44,3 +44,15 @@ Se [DRIFT.md](DRIFT.md) for skillet mellom det lokale miljøet og en ekstern dri
 - Uavhengig personstudie, skjermleserrevisjon, reell nettverks-/lasttest og ekstern produksjonsdeploy er ikke gjennomført av disse kontrollene.
 
 Oppfølging av forsiden: mørk teal/grønn hovedseksjon, gul behovsknapp og tre fargede innganger. Utloggede brukere ser «Registrer behov» både på forsiden og i menyen. Knappen går via innlogging til behovsskjemaet; offentlig rolle kreves fortsatt. Egen HTTP-test og nettleserkontroll bekrefter retur til skjemaet. Forside kontrollert ved320/1280piksler uten horisontal side-overflow.
+
+## Områdevalg og vurdering av tilbakemelding på forsiden
+
+Brukeren bekreftet behov for områdevalg både på behov og i ressurssøket. Det er implementert som et rektangel med to klikk/trykk og manuelle koordinater. Det krever ikke at brukeren holder og drar. Dette følger retningen i W3Cs veiledning om [alternativer til dragging](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html). Feltene har synlige etiketter og tilknyttede instruksjoner, jf. [W3Cs skjemaveiledning](https://www.w3.org/WAI/tutorials/forms/instructions/). Dette er ikke en erklæring om full samsvar.
+
+Det innlimte LLM-notatet ble behandlet som en heuristisk vurdering av et skjermbilde, ikke som en brukertest eller nye oppgavekrav. Følgende forslag er tatt inn: mer konkret forklaring av formål/ressurseksempler, konsekvente handlingsnavn, tydeligere konto-/rolleinformasjon, større hjelpetekst, praktiske steg i illustrasjonen og toppnavigasjon for utloggede brukere. Innlogget arbeidsflate beholder sidemenyen. Fargepaletten beholdes. Kortene har vanlige tydelige lenker; hele kortflaten gjøres ikke til en skjult klikkflate.
+
+Områdegrensene valideres på serveren og brukes i SQL både ved treffliste og tildeling. Ugyldige søk viser ikke et ufiltrert datasett; filtervalg og rettigheter beholdes ved feilretting. Eksisterende punkt og område kan ikke lagres samtidig. Manuelle felt er synlige uten JavaScript, også ved slik konflikt. En uferdig tegning lagres ikke, og avbryt beholder tidligere valg.
+
+Nye tester dekker områdegrenser/validering, kantpunkter, tildeling utenfor området, kryssing av regioner, eierskap og paginering/filterbevaring. Komponenttester med falskt kart dekker to hjørner, punktbytte, avbrudd, tom markering og bibliotek-/flisfeil. Disse erstatter ikke en ny visuell nettleserkontroll av områdevelgeren. Nettlesertilgangen ble deaktivert i Work under denne oppfølgingen; tidligere kontroll av den eldre forsiden gjelder ikke automatisk den nye toppmenyen eller områdeinteraksjonen.
+
+Sluttkontroll for områdeoppfølgingen: 73 av73 .NET-tester mot isolert MariaDB og10 av10 JavaScript-tester bestått; Release0feil/0advarsler, EF uten manglende migrasjon, Docker web/MariaDB healthy. Områdereview av kode fant tre feil (tap av filtre ved ugyldig søk, skjulte punktfelt ved punkt/område-konflikt uten JavaScript og feil store/små bokstaver i feillenker); disse er rettet, og filter-/feillenkeoppførselen har egen HTTP-test. Ny visuell nettleserkontroll gjenstår som beskrevet ovenfor.

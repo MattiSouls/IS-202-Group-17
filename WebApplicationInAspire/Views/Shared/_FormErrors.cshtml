@@ -1,7 +1,7 @@
 @if (!ViewData.ModelState.IsValid)
 {
     <div id="form-errors" class="feedback danger" role="alert" tabindex="-1" data-focus-errors>
-        <h2 class="h5">Kontroller opplysningene</h2><p>Ingenting er lagret ennå. Rett feltene under og prøv igjen.</p>
+        <h2 class="h5">Kontroller opplysningene</h2><p>@(ViewData["FormErrorHelp"] as string ?? "Ingenting er lagret ennå. Rett feltene under og prøv igjen.")</p>
         <ul>@foreach (var field in ViewData.ModelState) { foreach (var error in field.Value!.Errors) { <li><a href="@(string.IsNullOrEmpty(field.Key) ? "#main-content" : "#" + field.Key.Replace(".", "_"))">@(string.IsNullOrEmpty(error.ErrorMessage) ? "Feltet inneholder en ugyldig verdi." : error.ErrorMessage)</a></li> } }</ul>
     </div>
 }

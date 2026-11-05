@@ -2,16 +2,18 @@
 @using WebApplicationInAspire.Models
 @model ResourceOverviewViewModel
 @{ ViewData["Title"] = User.IsInRole("Admin") ? "Alle ressurser" : Model.IsPublicOverview ? "Finn ressurser" : "Mine ressurser"; var filter = Model.Filter;
-var routes = new Dictionary<string,string> { ["q"] = filter.Q ?? "", ["region"] = filter.Region ?? "", ["type"] = filter.Type ?? "", ["status"] = filter.Status ?? "" }; }
+var routes = new Dictionary<string,string> { ["q"] = filter.Q ?? "", ["region"] = filter.Region ?? "", ["type"] = filter.Type ?? "", ["status"] = filter.Status ?? "", ["areaSouth"]=filter.AreaSouth?.ToString(System.Globalization.CultureInfo.InvariantCulture)??"", ["areaWest"]=filter.AreaWest?.ToString(System.Globalization.CultureInfo.InvariantCulture)??"", ["areaNorth"]=filter.AreaNorth?.ToString(System.Globalization.CultureInfo.InvariantCulture)??"", ["areaEast"]=filter.AreaEast?.ToString(System.Globalization.CultureInfo.InvariantCulture)??"" }; }
 <header class="page-heading"><div><p class="eyebrow">RESSURSOVERSIKT</p><h1>@ViewData["Title"]</h1><p>@(Model.IsPublicOverview ? "Søk etter tilbud. Match med et behov for å kontrollere kategori, region og tidspunkt." : "Hold tilbudene oppdatert. Du får et varsel når en ressurs blir tildelt eller frigitt.")</p></div>
 @if (User.IsInRole("ResourceProvider") || User.IsInRole("Admin")) { <div class="actions"><a asp-action="Register" class="btn btn-primary">＋ Registrer ressurs</a></div> }</header>
-<form method="get" asp-action="Overview" class="panel filter-panel"><div class="filter-grid">
+<form method="get" asp-action="Overview" class="panel filter-panel"><partial name="_FormErrors" /><div class="filter-grid">
 <div><label for="q">Søk i navn, kategori eller region</label><input id="q" name="q" value="@filter.Q" type="search" maxlength="100" class="form-control" placeholder="For eksempel pumpe" /></div>
 <div><label for="region">Region</label><select id="region" name="region" class="form-select"><option value="">Alle regioner</option>@foreach (var region in Model.Regions) { <option value="@region" selected="@(region.Equals(filter.Region, StringComparison.OrdinalIgnoreCase))">@region</option> }</select></div>
 <div><label for="type">Kategori</label><select id="type" name="type" class="form-select"><option value="">Alle kategorier</option>@foreach (var type in Model.Types) { <option value="@type" selected="@(type.Equals(filter.Type, StringComparison.OrdinalIgnoreCase))">@type</option> }</select></div>
 @if (!Model.IsPublicOverview) { <div><label for="status">Status</label><select id="status" name="status" class="form-select"><option value="">Alle statuser</option><option value="offered" selected="@(filter.Status == "offered")">Tilbudt av eier</option><option value="assigned" selected="@(filter.Status == "assigned")">Tildelt</option><option value="paused" selected="@(filter.Status == "paused")">Pauset av eier</option></select></div> }
-<div class="actions"><button type="submit" class="btn btn-primary">Søk</button><a asp-action="Overview" class="btn btn-secondary">Nullstill</a></div></div></form>
-<div class="list-meta"><span><strong>@Model.Total</strong> @(Model.Total == 1 ? "ressurs" : "ressurser") funnet · maks 10 per side</span>@if (!string.IsNullOrWhiteSpace(filter.Region)) { <span class="actions"><a asp-action="ExportCsv" asp-route-region="@filter.Region">Last ned hele regionen (CSV)</a><a asp-action="RegionalList" asp-route-region="@filter.Region" target="_blank" rel="noopener">Skriv ut regionliste ↗</a></span> }</div>
+<div class="actions"><button type="submit" class="btn btn-primary">Søk</button><a asp-action="Overview" class="btn btn-secondary">Nullstill</a></div></div>
+<partial name="_AreaPicker" model="filter" /></form>
+@if(filter.Area is {} selectedArea){<div class="feedback success"><strong>Kartområde aktivt.</strong> Treffene er innenfor valgt rektangel. Regionfilteret brukes ikke så lenge området er valgt.</div>}
+<div class="list-meta"><span><strong>@Model.Total</strong> @(Model.Total == 1 ? "ressurs" : "ressurser") funnet · maks 10 per side</span>@if (!filter.HasAreaInput && !string.IsNullOrWhiteSpace(filter.Region)) { <span class="actions"><a asp-action="ExportCsv" asp-route-region="@filter.Region">Last ned hele regionen (CSV)</a><a asp-action="RegionalList" asp-route-region="@filter.Region" target="_blank" rel="noopener">Skriv ut regionliste ↗</a></span> }</div>
 @if (Model.Resources.Count == 0) { <div class="panel empty-state"><h2>Ingen ressurser passer filtrene</h2><p>Prøv en annen kategori eller region. Nye tilbud vises når leverandøren har registrert tidsrom og tilgjengelighet.</p><a asp-action="Overview" class="btn btn-secondary">Vis alle</a></div> }
 else
 {
@@ -23,8 +25,8 @@ else
 <details class="panel map-panel" data-map-toggle><summary>Vis kart for de @Model.Resources.Count ressursene på denne siden</summary><div id="overviewMap" class="map-box" aria-label="Ressursenes plassering"></div><p id="overview-map-status" class="map-caption" role="status">Listen over inneholder de samme ressursene og fungerer også uten kart.</p></details>
 }
 @section Scripts {
+<link rel="stylesheet" href="~/lib/leaflet/leaflet.css" /><script src="~/lib/leaflet/leaflet.js"></script><script src="~/js/area-picker.js" asp-append-version="true"></script>
 @if (Model.Resources.Count > 0) {
-<link rel="stylesheet" href="~/lib/leaflet/leaflet.css" /><script src="~/lib/leaflet/leaflet.js"></script>
 <script nonce="@Context.Items["CspNonce"]">
 (() => {
  const status = document.getElementById('overview-map-status');

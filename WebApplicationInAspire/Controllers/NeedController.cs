@@ -39,6 +39,10 @@ public class NeedController(INeedRepository repository, AllocationService alloca
             CreationToken = model.RequestId,
             Latitude = model.Latitude,
             Longitude = model.Longitude,
+            AreaSouth = model.AreaSouth,
+            AreaWest = model.AreaWest,
+            AreaNorth = model.AreaNorth,
+            AreaEast = model.AreaEast,
             Region = model.Region.Trim(),
             Location = model.Location,
             NeededAt = model.NeededAt!.Value,
@@ -104,7 +108,11 @@ public class NeedController(INeedRepository repository, AllocationService alloca
             ContactName = need.ContactName,
             PhoneNumber = need.PhoneNumber,
             Latitude = need.Latitude,
-            Longitude = need.Longitude
+            Longitude = need.Longitude,
+            AreaSouth = need.AreaSouth,
+            AreaWest = need.AreaWest,
+            AreaNorth = need.AreaNorth,
+            AreaEast = need.AreaEast
         });
     }
     [HttpPost, ValidateAntiForgeryToken]
@@ -118,6 +126,7 @@ public class NeedController(INeedRepository repository, AllocationService alloca
         need.Version = model.Version; need.Type = model.Type; need.Region = model.Region; need.Location = model.Location;
         need.NeededAt = model.NeededAt!.Value; need.Priority = model.Priority; need.ContactName = model.ContactName;
         need.PhoneNumber = model.PhoneNumber; need.Latitude = model.Latitude; need.Longitude = model.Longitude;
+        need.AreaSouth = model.AreaSouth; need.AreaWest = model.AreaWest; need.AreaNorth = model.AreaNorth; need.AreaEast = model.AreaEast;
         if (!await repository.EditAsync(need))
         {
             Response.StatusCode = 409;

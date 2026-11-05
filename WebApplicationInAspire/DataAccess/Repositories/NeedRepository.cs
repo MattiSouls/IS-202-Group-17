@@ -33,7 +33,10 @@ public class NeedRepository(ApplicationDbContext context) : INeedRepository
         .ExecuteUpdateAsync(update => update.SetProperty(n => n.Type, need.Type.Trim()).SetProperty(n => n.Region, need.Region.Trim())
             .SetProperty(n => n.Location, need.Location).SetProperty(n => n.NeededAt, need.NeededAt).SetProperty(n => n.Priority, need.Priority)
             .SetProperty(n => n.ContactName, need.ContactName).SetProperty(n => n.PhoneNumber, need.PhoneNumber)
-            .SetProperty(n => n.Latitude, need.Latitude).SetProperty(n => n.Longitude, need.Longitude).SetProperty(n => n.Version, n => n.Version + 1)) == 1;
+            .SetProperty(n => n.Latitude, need.Latitude).SetProperty(n => n.Longitude, need.Longitude)
+            .SetProperty(n => n.AreaSouth, need.AreaSouth).SetProperty(n => n.AreaWest, need.AreaWest)
+            .SetProperty(n => n.AreaNorth, need.AreaNorth).SetProperty(n => n.AreaEast, need.AreaEast)
+            .SetProperty(n => n.Version, n => n.Version + 1)) == 1;
 
     public async Task<IReadOnlyList<Need>> GetAllAsync(CancellationToken cancellationToken = default)
         => await context.Needs.AsNoTracking().Include(need => need.AssignedResource)

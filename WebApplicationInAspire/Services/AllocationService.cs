@@ -15,16 +15,26 @@ public class AllocationService(ApplicationDbContext context)
     public Task<Resource?> FindCandidateAsync(Need need, int id) => MatchingRules.CanAssign(need) ? Candidates(need).SingleOrDefaultAsync(r => r.Id == id) : Task.FromResult<Resource?>(null);
     public Task<Resource?> GetResourceAsync(int id) => context.Resources.AsNoTracking().SingleOrDefaultAsync(r => r.Id == id);
 
-    private IQueryable<Resource> Candidates(Need need)
+    private IQueryable<Resource> CandidateFilter(Need need)
     {
         var type = MatchingRules.Normalize(need.Type);
         var region = MatchingRules.Normalize(need.Region);
         var query = context.Resources.AsNoTracking().Where(resource => resource.IsAvailable
             && resource.AvailableFrom <= need.NeededAt && resource.AvailableUntil >= need.NeededAt
-            && resource.Type.Trim().ToUpper() == type && resource.Region.Trim().ToUpper() == region
+            && resource.Type.Trim().ToUpper() == type
             && !context.Needs.Any(other => other.AssignedResourceId == resource.Id && other.Status == NeedStatuses.Assigned));
-        if (need.Latitude is double latitude && need.Longitude is double longitude)
+        if (MatchingRules.Area(need) is { } area)
+            return query.Where(r => r.Latitude >= area.South && r.Latitude <= area.North && r.Longitude >= area.West && r.Longitude <= area.East);
+        if (MatchingRules.HasAreaInput(need)) return query.Where(r => false); // Ugyldige eldre data må ikke utvide søket.
+        return query.Where(r => r.Region.Trim().ToUpper() == region);
+    }
+
+    private IQueryable<Resource> Candidates(Need need)
+    {
+        var query = CandidateFilter(need);
+        if (MatchingRules.Origin(need) is { } origin)
         {
+            var (latitude, longitude) = origin;
             const double rad = Math.PI / 180;
             // Storcirkelavstand oversettes til MariaDB-matematikk før Skip/Take.
             return query.OrderBy(resource => Math.Acos(Math.Min(1d, Math.Max(-1d,
@@ -62,10 +72,7 @@ public class AllocationService(ApplicationDbContext context)
 
         // Låser/oppdaterer ressursen før behovet. Andre tildelinger må vente og sjekke vilkårene igjen.
         var originalResourceVersion = resource.Version;
-        var claimed = await context.Resources.Where(resource => resource.Id == resourceId && resource.Version == originalResourceVersion && resource.IsAvailable
-                && resource.AvailableFrom <= need.NeededAt && resource.AvailableUntil >= need.NeededAt
-                && resource.Type.Trim().ToUpper() == type && resource.Region.Trim().ToUpper() == region
-                && !context.Needs.Any(other => other.AssignedResourceId == resource.Id && other.Status == NeedStatuses.Assigned))
+        var claimed = await CandidateFilter(need).Where(resource => resource.Id == resourceId && resource.Version == originalResourceVersion)
             .ExecuteUpdateAsync(update => update.SetProperty(resource => resource.IsAvailable, false)
                 .SetProperty(resource => resource.Version, resource => resource.Version + 1));
         if (claimed != 1) return AllocationResult.Conflict;

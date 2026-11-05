@@ -25,6 +25,10 @@ public class Need
     public DateTime NeededAt { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
+    public double? AreaSouth { get; set; }
+    public double? AreaWest { get; set; }
+    public double? AreaNorth { get; set; }
+    public double? AreaEast { get; set; }
 
     [Required, MaxLength(50)]
     public string Priority { get; set; } = string.Empty;
