@@ -1,0 +1,41 @@
+@using WebApplicationInAspire.Models.Entities
+@model WebApplicationInAspire.Models.NeedMatchesViewModel
+@{ ViewData["Title"] = "Ressurser for behovet"; }
+<h1 class="h2">Ressurser for @Model.Need.Type</h1>
+<p>Region: <strong>@Model.Need.Region</strong>. Treff krever samme type og region. Bare tilgjengelige ressurser vises.</p>
+<a asp-action="Overview" class="btn btn-secondary mb-3">Til behovsoversikten</a>
+@if (Model.Need.Status == NeedStatuses.Assigned)
+{
+    <div class="alert alert-info">Behovet er allerede tildelt @Model.Need.AssignedResource?.Name. Frigi ressursen før en ny tildeling.</div>
+}
+else if (Model.Need.Status == NeedStatuses.Resolved)
+{
+    <div class="alert alert-info">Behovet er løst. Endre status til Ny eller Vurderes før du tildeler en ressurs.</div>
+}
+else if (Model.Resources.Count == 0)
+{
+    <p>Ingen ledige ressurser passer akkurat nå. Kontroller type og region, eller prøv igjen senere.</p>
+}
+else
+{
+    <div class="row g-3">
+    @foreach (var resource in Model.Resources)
+    {
+        <div class="col-12 col-md-6"><article class="card h-100"><div class="card-body">
+            <h2 class="h4">@resource.Name</h2>
+            <p>@resource.Description</p>
+            <p>@resource.Type · @resource.Region</p>
+            <p>Kontakt: @resource.ContactName · @resource.PhoneNumber</p>
+            @if (Model.CanManage)
+            {
+                <form asp-action="Assign" method="post">
+                    <input type="hidden" name="id" value="@Model.Need.Id" />
+                    <input type="hidden" name="resourceId" value="@resource.Id" />
+                    <button type="submit" class="btn btn-primary">Tildel ressurs</button>
+                </form>
+            }
+            else { <p>Oppretteren av behovet eller administrator kan tildele ressursen.</p> }
+        </div></article></div>
+    }
+    </div>
+}

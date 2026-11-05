@@ -1,8 +1,17 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
-}
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+@using WebApplicationInAspire.Security
+@{ ViewData["Title"] = "Forside"; }
+<section class="py-4">
+    <h1>Ressurser og behov på ett sted</h1>
+    <p class="lead">Ressursportalen kobler offentlige behov med ressurser fra leverandører.</p>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a asp-controller="Resource" asp-action="Overview" class="btn btn-primary mb-2">Se ressurser</a>
+        @if (User.IsInRole(RoleNames.PublicUser) || User.IsInRole(RoleNames.Admin))
+        { <a asp-controller="Need" asp-action="Overview" class="btn btn-outline-primary mb-2">Se behov og matching</a> }
+    }
+    else
+    {
+        <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Logg inn</a>
+        <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary">Registrer deg som ressursleverandør</a>
+    }
+</section>

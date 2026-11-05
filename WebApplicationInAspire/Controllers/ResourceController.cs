@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using WebApplicationInAspire.DataAccess.Repositories;
 using WebApplicationInAspire.Models;
 using WebApplicationInAspire.Models.Entities;
+using WebApplicationInAspire.Security;
 
 namespace WebApplicationInAspire.Controllers;
 
@@ -28,6 +29,7 @@ public class ResourceController : Controller
 
     // 1. CREATE - Vis skjema
     [HttpGet]
+    [Authorize(Roles = RoleNames.ResourceProvider + "," + RoleNames.Admin)]
     public IActionResult Register()
     {
         return View(new ResourceViewModel());
@@ -35,6 +37,7 @@ public class ResourceController : Controller
 
     // 1. CREATE - Lagre til MariaDB
     [HttpPost]
+    [Authorize(Roles = RoleNames.ResourceProvider + "," + RoleNames.Admin)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(ResourceViewModel model)
     {
@@ -50,6 +53,8 @@ public class ResourceController : Controller
         {
             Name = model.Name,
             Type = model.Type,
+            Region = model.Region.Trim(),
+            IsAvailable = model.IsAvailable,
             Description = model.Description,
             ContactName = model.ContactName,
             PhoneNumber = model.PhoneNumber,
@@ -68,11 +73,37 @@ public class ResourceController : Controller
 
     // 2. READ - Oversikt over egne ressurser
     [HttpGet]
-    public async Task<IActionResult> Overview()
+    public async Task<IActionResult> Overview(string? region)
     {
-        var userId = GetCurrentUserId();
-        var resources = await _repository.GetByOwnerAsync(userId);
-        return View(resources);
+        return View(await BuildOverviewAsync(region));
+    }
+
+    /// <summary>Utskrift bruker samme rolle- og regionfilter som oversikten.</summary>
+    [HttpGet]
+    public async Task<IActionResult> RegionalList(string? region)
+    {
+        if (string.IsNullOrWhiteSpace(region))
+        {
+            TempData["ErrorMessage"] = "Velg en region før du åpner utskriftslisten.";
+            return RedirectToAction(nameof(Overview));
+        }
+        return View(await BuildOverviewAsync(region));
+    }
+
+    private async Task<ResourceOverviewViewModel> BuildOverviewAsync(string? region)
+    {
+        var isPublic = User.IsInRole(RoleNames.PublicUser) || User.IsInRole(RoleNames.Admin);
+        var ownerId = isPublic ? null : GetCurrentUserId();
+        var all = await _repository.GetForOverviewAsync(ownerId, isPublic, null);
+        return new ResourceOverviewViewModel
+        {
+            Resources = string.IsNullOrWhiteSpace(region) ? all : await _repository.GetForOverviewAsync(ownerId, isPublic, region),
+            Regions = all.Select(resource => resource.Region.Trim()).Where(value => value.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(value => value).ToList(),
+            Region = region?.Trim(),
+            IsPublicOverview = isPublic,
+            AssignedResourceIds = await _repository.GetAssignedIdsAsync()
+        };
     }
 
     // 3. UPDATE - Vis redigeringsskjema
@@ -96,6 +127,8 @@ public class ResourceController : Controller
             Id = resource.Id,
             Name = resource.Name,
             Type = resource.Type,
+            Region = resource.Region,
+            IsAvailable = resource.IsAvailable,
             Description = resource.Description,
             ContactName = resource.ContactName,
             PhoneNumber = resource.PhoneNumber,
@@ -103,6 +136,7 @@ public class ResourceController : Controller
             Longitude = resource.Longitude
         };
 
+        ViewData["IsAssigned"] = (await _repository.GetAssignedIdsAsync()).Contains(id);
         return View(model);
     }
 
@@ -136,13 +170,21 @@ public class ResourceController : Controller
         // Oppdater feltene
         existingResource.Name = model.Name;
         existingResource.Type = model.Type;
+        existingResource.Region = model.Region.Trim();
+        existingResource.IsAvailable = model.IsAvailable;
         existingResource.Description = model.Description;
         existingResource.ContactName = model.ContactName;
         existingResource.PhoneNumber = model.PhoneNumber;
         if (model.Latitude.HasValue) existingResource.Latitude = model.Latitude.Value;
         if (model.Longitude.HasValue) existingResource.Longitude = model.Longitude.Value;
 
-        await _repository.UpdateAsync(existingResource);
+        if (!await _repository.UpdateAsync(existingResource))
+        {
+            ViewData["IsAssigned"] = (await _repository.GetAssignedIdsAsync()).Contains(id);
+            ModelState.AddModelError(string.Empty, "Ressursen er tildelt eller har blitt endret. Frigi en eventuell tildeling før redigering.");
+            Response.StatusCode = StatusCodes.Status409Conflict;
+            return View(model);
+        }
         _logger.LogInformation("Ressurs {Id} oppdatert", id);
 
         return RedirectToAction(nameof(Overview));
@@ -164,6 +206,7 @@ public class ResourceController : Controller
             return Forbid();
         }
 
+        ViewData["IsAssigned"] = (await _repository.GetAssignedIdsAsync()).Contains(id);
         return View(resource);
     }
 
@@ -184,7 +227,13 @@ public class ResourceController : Controller
             return Forbid();
         }
 
-        await _repository.DeleteAsync(id);
+        if (!await _repository.DeleteAsync(id))
+        {
+            ViewData["IsAssigned"] = true;
+            ViewData["ErrorMessage"] = "Ressursen er tildelt eller har blitt endret. Den ble ikke slettet.";
+            Response.StatusCode = StatusCodes.Status409Conflict;
+            return View("Delete", resource);
+        }
         _logger.LogInformation("Ressurs {Id} slettet", id);
 
         return RedirectToAction(nameof(Overview));
