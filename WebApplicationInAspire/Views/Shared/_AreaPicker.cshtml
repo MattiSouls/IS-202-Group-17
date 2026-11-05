@@ -12,7 +12,8 @@
         <p class="form-help" id="area-help">@(allowPoint ? "Velg et punkt, eller marker et rektangel som behovet gjelder. Med et område finner matching ressurser med registrert plassering innenfor grensen, også på tvers av regioner. Avstand måles fra midtpunktet." : "Marker et rektangel for å søke etter ressurser med registrert plassering innenfor området. Området erstatter regionfilteret; kategori og øvrige filtre gjelder fortsatt.") Du kan også skrive kjente koordinater i feltene under. Det tegnes ingen grense automatisk.</p>
         <div class="actions spatial-tools" role="group" aria-label="Velg kartverktøy">
             @if (allowPoint) { <button type="button" class="btn btn-secondary" data-pick-point aria-pressed="false" disabled>Velg punkt</button> }
-            <button type="button" class="btn btn-secondary" data-draw-area aria-pressed="false" disabled>Marker område</button>
+            <button type="button" class="btn btn-secondary" data-draw-area aria-pressed="false" disabled>Dra for å markere område</button>
+            <button type="button" class="btn btn-secondary" data-pick-corners aria-pressed="false" disabled>Velg to hjørner</button>
             <button type="button" class="btn btn-secondary" data-cancel-area hidden>Avbryt markering</button>
             <button type="button" class="btn btn-secondary" data-clear-area disabled>Fjern kartvalg</button>
         </div>

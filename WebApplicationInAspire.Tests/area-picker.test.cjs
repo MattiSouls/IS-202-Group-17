@@ -12,28 +12,34 @@ function setup({ leaflet = true, open = true, bounds = ['', '', '', ''] } = {}) 
         setAttribute(name, value) { this.attributes[name] = value; }, focus() { this.focused = true; } });
     const fields = Object.fromEntries(['AreaSouth', 'AreaWest', 'AreaNorth', 'AreaEast', 'Latitude', 'Longitude'].map(n => [n, element()]));
     ['AreaSouth', 'AreaWest', 'AreaNorth', 'AreaEast'].forEach((n, i) => fields[n].value = bounds[i]);
-    const form = element(), status = element(), draw = element(), point = element(), cancel = element(), clear = element(), pointFields = element();
+    const form = element(), status = element(), draw = element(), corners = element(), point = element(), cancel = element(), clear = element(), pointFields = element();
+    const captured = new Set();
+    const mapElement = Object.assign(element(), { classList: { toggle() {} }, closest: () => null,
+        setPointerCapture(id) { captured.add(id); }, hasPointerCapture: id => captured.has(id), releasePointerCapture(id) { captured.delete(id); } });
     const selectors = { '[data-area-status]': status, '[data-draw-area]': draw, '[data-pick-point]': point,
-        '[data-cancel-area]': cancel, '[data-clear-area]': clear, '[data-point-fields]': pointFields, '[data-area-map]': element() };
+        '[data-pick-corners]': corners, '[data-cancel-area]': cancel, '[data-clear-area]': clear, '[data-point-fields]': pointFields, '[data-area-map]': mapElement };
     const root = Object.assign(element(), { open, closest: () => form,
         querySelector(selector) { const name = /^\[name="(.+)"\]$/.exec(selector)?.[1]; return name ? fields[name] : selectors[selector]; } });
     const mapEvents = {}, tileEvents = {}, rectangles = [], fitted = [];
+    const navigationHandler = enabled => ({ active: enabled, enabled() { return this.active; }, enable() { this.active = true; }, disable() { this.active = false; } });
     const map = { setView() { return this; }, invalidateSize() {}, removeLayer() {}, fitBounds(bounds) { fitted.push(bounds); },
-        getContainer: () => ({ classList: { toggle() {} } }), on(name, callback) { mapEvents[name] = callback; return this; } };
+        dragging: navigationHandler(true), doubleClickZoom: navigationHandler(true), boxZoom: navigationHandler(true), touchZoom: navigationHandler(true), scrollWheelZoom: navigationHandler(false),
+        mouseEventToLatLng: event => event.latlng, getContainer: () => mapElement, on(name, callback) { mapEvents[name] = callback; return this; } };
     const layer = () => ({ addTo() { return this; } });
     let mapsCreated = 0;
     const context = { document: { querySelectorAll: selector => selector === '[data-area-picker]' ? [root] : [] } };
     if (leaflet) context.L = { map: () => { mapsCreated++; return map; }, tileLayer: () => ({ addTo() { return this; }, on(name, cb) { tileEvents[name] = cb; return this; } }),
         rectangle(bounds) { rectangles.push(bounds); return { ...layer(), getBounds: () => bounds }; }, marker: layer, circleMarker: layer };
     vm.runInNewContext(script, context);
-    return { fields, form, root, status, draw, point, cancel, clear, pointFields, mapEvents, tileEvents, rectangles, fitted,
+    return { fields, form, root, status, draw, corners, point, cancel, clear, pointFields, mapEvents, tileEvents, rectangles, fitted, map, mapElement,
         get mapsCreated() { return mapsCreated; }, click(lat, lng) { mapEvents.click({ latlng: { lat, lng } }); },
+        pointer(name, lat, lng, x, y, overrides = {}) { const event = { pointerId:1, button:0, isPrimary:true, target:mapElement, clientX:x, clientY:y, latlng:{lat,lng}, preventDefault() {}, stopPropagation() {}, ...overrides }; mapElement.events[name](event); },
         values() { return ['AreaSouth', 'AreaWest', 'AreaNorth', 'AreaEast'].map(n => String(fields[n].value)); } };
 }
 
 test('Incomplete drawing cannot submit and cancel preserves the previous selection', () => {
     const s = setup({ bounds: ['58', '7', '59', '8'] });
-    s.draw.events.click(); s.click(60, 9);
+    s.corners.events.click(); s.click(60, 9);
     assert.deepEqual(s.values(), ['58', '7', '59', '8']);
     const event = { defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
     s.form.events.submit(event);
@@ -43,7 +49,7 @@ test('Incomplete drawing cannot submit and cancel preserves the previous selecti
 
 test('Two opposite corners normalize a rectangle; switching to a point clears the area', () => {
     const s = setup(); s.fields.Latitude.value = '58.5'; s.fields.Longitude.value = '7.5';
-    s.draw.events.click(); s.click(59, 8); s.click(58, 7);
+    s.corners.events.click(); s.click(59, 8); s.click(58, 7);
     assert.deepEqual(s.values(), ['58.000000', '7.000000', '59.000000', '8.000000']);
     assert.equal(s.fields.Latitude.value, ''); assert.equal(s.fields.Longitude.value, ''); assert.equal(s.pointFields.hidden, true);
     assert.match(s.status.textContent, /Område valgt/);
@@ -54,7 +60,7 @@ test('Two opposite corners normalize a rectangle; switching to a point clears th
 
 test('Degenerate corners and Escape do not overwrite a saved area', () => {
     const s = setup({ bounds: ['58', '7', '59', '8'] });
-    s.draw.events.click(); s.click(60, 9); s.click(60, 10);
+    s.corners.events.click(); s.click(60, 9); s.click(60, 10);
     assert.deepEqual(s.values(), ['58', '7', '59', '8']); assert.match(s.status.textContent, /bredde og høyde/);
     s.root.events.keydown({ key: 'Escape' }); assert.equal(s.cancel.hidden, true);
     assert.deepEqual(s.values(), ['58', '7', '59', '8']);
@@ -79,4 +85,36 @@ test('Hidden maps initialize only when opened and reuse the same map on reopenin
     assert.equal(s.mapsCreated, 0); s.root.open = true; s.root.events.toggle();
     assert.equal(s.mapsCreated, 1); s.root.events.toggle(); assert.equal(s.mapsCreated, 1);
     assert.ok(s.fitted.length > 0);
+});
+
+test('Dragging previews the rectangle, commits only on release, and restores navigation', () => {
+    const s = setup({ bounds:['58','7','59','8'] });
+    s.draw.events.click(); assert.equal(s.map.dragging.enabled(),false);
+    s.pointer('pointerdown',60,10,10,10);
+    s.pointer('pointermove',61,11,80,90);
+    assert.deepEqual(s.values(),['58','7','59','8']);
+    s.pointer('pointerup',61,11,80,90);
+    assert.deepEqual(s.values(),['60.000000','10.000000','61.000000','11.000000']);
+    assert.equal(s.map.dragging.enabled(),true); assert.equal(s.map.touchZoom.enabled(),true);
+    assert.equal(s.map.scrollWheelZoom.enabled(),false); assert.equal(s.cancel.hidden,true);
+});
+
+test('Cancelled or tiny drags preserve the old area and do not leave the map locked', () => {
+    const s = setup({ bounds:['58','7','59','8'] });
+    s.draw.events.click();s.pointer('pointerdown',60,10,10,10);s.pointer('pointermove',61,11,80,90);
+    s.pointer('pointercancel',61,11,80,90);
+    assert.deepEqual(s.values(),['58','7','59','8']);assert.equal(s.map.dragging.enabled(),true);
+    s.draw.events.click();s.pointer('pointerdown',60,10,10,10);s.pointer('pointerup',60.01,10.01,11,11);
+    assert.deepEqual(s.values(),['58','7','59','8']);assert.match(s.status.textContent,/for lite/);
+    s.cancel.events.click();assert.equal(s.map.dragging.enabled(),true);
+});
+
+test('Secondary pointers and map controls cannot begin a drag; closing cancels it', () => {
+    const s = setup({ bounds:['58','7','59','8'] });s.draw.events.click();
+    s.pointer('pointerdown',60,10,10,10,{isPrimary:false});s.pointer('pointerup',61,11,80,90);
+    assert.deepEqual(s.values(),['58','7','59','8']);
+    s.pointer('pointerdown',60,10,10,10,{target:{closest:()=>({})}});s.pointer('pointerup',61,11,80,90);
+    assert.deepEqual(s.values(),['58','7','59','8']);
+    s.pointer('pointerdown',60,10,10,10);s.root.open=false;s.root.events.toggle();
+    assert.equal(s.map.dragging.enabled(),true);assert.deepEqual(s.values(),['58','7','59','8']);
 });
