@@ -10,7 +10,7 @@ public enum AllocationResult { Success, NotFound, Forbidden, Conflict }
 /// <summary>Matching og tildeling. Ressurs og behov endres samlet i en MariaDB-transaksjon.</summary>
 public class AllocationService(ApplicationDbContext context)
 {
-    /// <summary>Filtrerer på type, region og ledig ressurs uten aktiv tildeling.</summary>
+    /// <summary>Filtrerer på type, region og tidsrom ved behovets tidspunkt, uten aktiv tildeling.</summary>
     public async Task<IReadOnlyList<Resource>> FindMatchesAsync(Need need)
     {
         if (!MatchingRules.CanAssign(need)) return [];
@@ -19,6 +19,7 @@ public class AllocationService(ApplicationDbContext context)
         if (type.Length == 0 || region.Length == 0) return [];
         return await context.Resources.AsNoTracking()
             .Where(resource => resource.IsAvailable
+                && resource.AvailableFrom <= need.NeededAt && resource.AvailableUntil >= need.NeededAt
                 && resource.Type.Trim().ToUpper() == type && resource.Region.Trim().ToUpper() == region
                 && !context.Needs.Any(other => other.AssignedResourceId == resource.Id && other.Status == NeedStatuses.Assigned))
             .OrderBy(resource => resource.Name).ThenBy(resource => resource.Id).ToListAsync();
@@ -40,6 +41,7 @@ public class AllocationService(ApplicationDbContext context)
 
         // Låser/oppdaterer ressursen før behovet. Andre tildelinger må vente og sjekke vilkårene igjen.
         var claimed = await context.Resources.Where(resource => resource.Id == resourceId && resource.IsAvailable
+                && resource.AvailableFrom <= need.NeededAt && resource.AvailableUntil >= need.NeededAt
                 && resource.Type.Trim().ToUpper() == type && resource.Region.Trim().ToUpper() == region
                 && !context.Needs.Any(other => other.AssignedResourceId == resource.Id && other.Status == NeedStatuses.Assigned))
             .ExecuteUpdateAsync(update => update.SetProperty(resource => resource.IsAvailable, false));

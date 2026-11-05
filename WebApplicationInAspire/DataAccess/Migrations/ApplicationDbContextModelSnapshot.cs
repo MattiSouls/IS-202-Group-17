@@ -288,6 +288,12 @@ namespace WebApplicationInAspire.DataAccess.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("AvailableFrom")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("AvailableUntil")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("ContactName")
                         .IsRequired()
                         .HasMaxLength(200)

@@ -1,353 +1,192 @@
-# Resource Registration
+# Ressursportalen - IS-202 Gruppe 17
 
-## 1. Om prosjektet
+ASP.NET Core MVC-applikasjon for offentlige behov og tilbudte ressurser ved kriser. Oppgave 2 bygger videre på registrering med Leaflet og legger til MariaDB, Identity, roller, ressurs-CRUD, behov, matching og tildeling.
 
-Dette prosjektet er en ASP.NET Core MVC-applikasjon for registrering av ressurser. Brukeren kan fylle ut informasjon om en ressurs, velge ressursens geografiske posisjon i et Leaflet-kart og sende registreringen til en oversiktsside.
+## Oppstart med Docker
 
-Applikasjonen består av en webapplikasjon og et .NET Aspire AppHost-prosjekt.
+Krever Git og Docker Desktop med Linux-containere. .NET 10 SDK trengs bare når du bygger eller tester utenfor Docker. Node.js 22+ brukes til de fire JavaScript-testene.
 
-### Teknologier
+```powershell
+git clone https://github.com/MattiSouls/IS-202-Group-17.git
+cd IS-202-Group-17
+Copy-Item .env.example .env
+```
 
-- ASP.NET Core MVC / .NET 10
-- Razor Views
-- Bootstrap
-- Leaflet 1.9.4
-- OpenStreetMap
-- .NET Aspire
-- Docker
+På macOS/Linux: bruk `cp .env.example .env`. Rediger `.env` før oppstart:
 
----
+- Sett egne lange `MARIADB_PASSWORD` og `MARIADB_ROOT_PASSWORD`.
+- Standardport er `WEB_PORT=8080`; databaseport er `DB_PORT=3307` på localhost.
+- Fyll valgfritt ut `SEED_PUBLIC_EMAIL/PASSWORD` for en offentlig demobruker, og `SEED_ADMIN_EMAIL/PASSWORD` for administrator. Ikke bruk ekte persondata eller del passordene i Git.
+- Vanlig brukerregistrering gir alltid rollen **ResourceProvider**. Offentlig rolle/admin kan ikke velges i registreringsskjemaet.
 
-## 2. Systemarkitektur
+```powershell
+docker compose up -d --build --wait
+docker compose ps
+```
 
-Applikasjonen følger MVC-arkitekturen.
+Åpne http://localhost:8080. Begge tjenestene, `web` og `mariadb`, skal kjøre. Web starter etter database-helsesjekken og kjører EF-migrasjonene automatisk. Et enkelt `docker run` av bare web-imaget er ikke tilstrekkelig, fordi løsningen trenger databasekobling.
+
+```powershell
+docker compose logs --tail 100 web mariadb
+docker compose stop
+docker compose start --wait
+```
+
+MariaDB-data og ASP.NET Data Protection-nøkler ligger i navngitte Docker-volumer og beholdes ved stopp/start og vanlig `docker compose down`. Ikke bruk `down -v` på gruppas arbeidsmiljø: det sletter volumene. Ta databasebackup før endring av et miljø med viktige data. Hvis porten er opptatt, endre porten i `.env`.
+
+Ved oppdatering: hent siste kode og kjør `docker compose up -d --build --wait`. Migrasjonen `AddResourceAvailabilityPeriod` legger til nullable tidsfelt uten å finne på datoer for eksisterende ressurser. Eieren må redigere slike ressurser og fylle ut tidsrom før de vises som offentlige tilbud eller matcher behov. Aktive tildelinger beholdes.
+
+### Kjøring med .NET lokalt
+
+Start databasen med `docker compose up -d mariadb`. Sett `ConnectionStrings:DefaultConnection` med `dotnet user-secrets set --project WebApplicationInAspire ...`, eller miljøvariabelen `ConnectionStrings__DefaultConnection`, til din lokale MariaDB. Bruk localhost og `DB_PORT`, ikke Compose-navnet `mariadb`.
+
+```powershell
+dotnet tool restore
+dotnet ef database update --project WebApplicationInAspire
+dotnet run --project WebApplicationInAspire
+```
+
+Lokale standardadresser fra launchSettings er http://localhost:5011 og https://localhost:7018. Aspire AppHost kan startes med `dotnet run --project WebApplicationInAspire.AppHost`, men AppHost oppretter ikke databasen; samme eksterne databasekonfigurasjon må være tilgjengelig. Docker Compose er den kontrollerte hovedflyten.
+
+## Roller og bruk
+
+| Rolle | Tilgang |
+|---|---|
+| ResourceProvider | Registrere, se, redigere og slette egne ressurser. Se egne tilgjengelige, utilgjengelige og tildelte ressurser. |
+| PublicUser | Registrere behov, se behov og tilgjengelige ressurser, matche og håndtere egne behov. |
+| Admin | Administrere ressurser og behov, også opprettet av andre. |
+
+Alle ressurs-/behovsruter krever innlogging. Brukertilknytning settes på serveren. En annen offentlig bruker kan se et behov og mulige treff, men bare oppretter/admin kan tildele, frigi eller endre statusen.
+
+Registrer ressurs med navn, type, region, tidsrom, tilgjengelighet, kontaktinformasjon og posisjon. Posisjon kan velges i Leaflet eller fylles inn som kjente bredde-/lengdegrader. Ved CDN-/kartfeil vises en melding om koordinatfeltene; ingen posisjon gjettes. Koordinater kontrolleres på serveren også uten JavaScript. Ressursoversikten fungerer som liste selv om kartet ikke lastes.
+
+Tidspunkter for både behov og ressurs oppgis som **norsk lokal tid**. Fra/til må være utfylt, og slutt må være etter start. Dette er en lokal demomodell; valg av tidssone og håndtering av tvetydige klokkeslett ved sommertid er ikke implementert. `CreatedAtUtc` er bare teknisk opprettelsestid.
+
+### Matching og status
+
+Treff krever samme type og region (store/små bokstaver og ytre mellomrom ignoreres), `IsAvailable=true`, ingen aktiv tildeling, og at `NeededAt` ligger innenfor ressursens tidsrom, inkludert endepunktene. Matching er ikke avstandsbasert. Tildeling kontrollerer vilkårene på nytt på serveren; en gammel treffliste gir ikke rett til å ta en ressurs som ikke lenger er ledig.
+
+- Ny (`New`) eller Vurderes (`UnderReview`) kan tildeles en passende ressurs.
+- Tildeling setter behovet til Tildelt (`Assigned`) og ressursen utilgjengelig i én MariaDB-transaksjon.
+- Frigi setter behovet til Vurderes, fjerner referansen og gjør ressursen tilgjengelig igjen.
+- Løs et tildelt behov setter status Løst (`Resolved`) og frigir ressursen samlet.
+- En tildelt ressurs kan ikke redigeres eller slettes før den er frigitt. Ved samtidighetskonflikt vises HTTP 409 og brukeren må oppdatere oversikten.
+
+Ressursoversikten kan filtreres på region. Velg en region før du åpner den utskriftsvennlige listen. Den følger samme rolletilgang som oversikten. Tilgjengelighet er eierens opplysning og bekrefter ikke at ressursen faktisk finnes på stedet; kontakt eieren ved bruk.
+
+## Arkitektur og kode
+
+.NET 10 / ASP.NET Core MVC, Razor, Bootstrap, Leaflet 1.9.4/OpenStreetMap, EF Core 9/Pomelo og MariaDB 11.4.
 
 ```text
-+-------------------+
-|     Nettleser     |
-+---------+---------+
-          |
-          v
-+-------------------+
-| Register.cshtml   |
-| Skjema + Leaflet  |
-+---------+---------+
-          |
-          | POST
-          v
-+-------------------+
-| ResourceController|
-+---------+---------+
-          |
-          v
-+-------------------+
-| ResourceViewModel |
-+---------+---------+
-          |
-          v
-+-------------------+
-| Overview.cshtml   |
-| Data + Leaflet    |
-+-------------------+
+Nettleser (skjema, kart og koordinater)
+  -> MVC-controller (GET/POST, validering, rolle/eierskap)
+  -> Repository / AllocationService
+  -> ApplicationDbContext (Identity + Resources + Needs)
+  -> MariaDB i Docker
+  -> redirect til ny GET / Razor-visning
 ```
 
-### Modell
+- `Controllers/AccountController.cs`: registrering, innlogging, utlogging og trygg lokal returadresse.
+- `Controllers/ResourceController.cs`: CRUD, rolletilpasset oversikt og regional utskrift.
+- `Controllers/NeedController.cs`: behov, status og tildelingshandlinger.
+- `Models/*ViewModel.cs`: validerte skjemaer. `Models/Entities/` er databasemodellene.
+- `DataAccess/`: DbContext, repositories og versjonerte EF-migrasjoner.
+- `Services/AllocationService.cs`: matching og atomisk assign/release med betingede SQL-oppdateringer.
+- `Views/Shared/_Resource*.cshtml` og `wwwroot/js/resource-position.js`: delte tids-/posisjonsfelt og kartfallback.
+- `WebApplicationInAspire.Tests/`: xUnit/NSubstitute, HTTP-/MariaDB-integrasjonstester og JavaScript-tester.
 
-`ResourceViewModel` ligger i:
+Tildeling låser/oppdaterer ressursen før behovet. Bare én forespørsel kan ta ressursen, og en tapende tildeling rulles tilbake. Redigering/sletting bruker samme låserekkefølge og kontrollerer aktiv tildeling. Testene bruker ekte MariaDB fordi EF InMemory ikke verifiserer transaksjoner, SQL eller låsing.
 
-`WebApplicationInAspire/Models/ResourceViewModel.cs`
+### Kravsporbarhet for Oppgave 2
 
-Modellen inneholder følgende felter:
+| Oppgavekrav | Implementasjon | Kontroll |
+|---|---|---|
+| MVC, GET/POST, skjema og kartpunkt | ResourceController, ResourceViewModel, Razor, resource-position.js | Resource_CRUD, valideringstester, nettleserregistrering og JavaScript-testene |
+| App og MariaDB i Docker, varig lagring | compose.yaml, ApplicationDbContext og Migrations | Docker-oppstart, Data_survives_new_application_host og Upgrade_from_previous_release |
+| Registrering og databaselagret bruker | AccountController og Identity | Registration_stores_hashed_password |
+| Autentisering, autorisasjon og ressurs-CRUD | Account/ResourceController, rollenavn og repositories | Roles_ownership_CSRF, Login_rejects_external_return_url, Resource_CRUD |
+| Offentlige behov, status, matching og regional liste | NeedController, AllocationService, RegionalList | Need_HTTP_flow, Matching_honors_period, samtidighetstestene og Public_and_regional_overview |
+| Ressursens tidspunkt/frister | AvailableFrom/AvailableUntil i modell/skjema/database/matching | ValidationTests, Invalid_period og Matching_honors_period |
+| Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Nettleserkontroll ved 390 px; reell person-/mobiltest gjenstår |
+| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 45 .NET + 4 JavaScript bestått lokalt; personstudien er ikke utført her |
+| Drift, arkitektur, kode- og KI-dokumentasjon | Denne README-en og kommentarer ved sentral kode | Sammenhold kjøreinstruksjoner, testnavn og faktisk kildekode; gruppa kontrollerer egen KI-beskrivelse |
 
-- `Name`
-- `Type`
-- `Description`
-- `ContactName`
-- `PhoneNumber`
-- `Latitude`
-- `Longitude`
+### Sikkerhet
 
-Modellen bruker Data Annotations for validering av obligatoriske felt. Koordinatene er nullable verdier (`double?`), slik at brukeren må velge en lokasjon i kartet før skjemaet kan sendes inn.
+Identity hasher passord, krever minst åtte tegn med stor/liten bokstav og tall, og låser konto i fem minutter etter fem feil. Cookies er HttpOnly. POST-handlinger har antiforgery, og rolle-/eierskapskontroll utføres på serveren. Registreringsfelt kan ikke gi adminrolle eller endre ressursens eier. Brukerinnhold vises kodet, også i kartpopup. Database-/kontopassord ligger i lokal konfigurasjon, ikke i repoet. Web kjører som ikke-root-bruker i containeren.
 
-### Controller
+Tofaktor er utelatt etter foreleserens avklaring, formidlet av gruppa 5. november 2026. Vanlig innlogging og autorisasjon er fortsatt implementert. Compose er et lokalt Development-oppsett bundet til localhost med HTTP, ikke en ferdig produksjonsdeploy. Produksjon krever blant annet HTTPS/reversproxy, sikker hemmelighetshåndtering og separat drift/backup.
 
-`ResourceController` ligger i:
+## Tester og gjentakbare resultater
 
-`WebApplicationInAspire/Controllers/ResourceController.cs`
+### Enhetstester og JavaScript
 
-Controlleren har to actions for registrering:
-
-#### GET `/Resource/Register`
-
-GET-metoden oppretter en tom `ResourceViewModel` og sender modellen til `Register.cshtml`.
-
-#### POST `/Resource/Register`
-
-POST-metoden mottar `ResourceViewModel` fra skjemaet.
-
-Hvis `ModelState` ikke er gyldig, returneres registreringssiden med modellen og tilhørende valideringsmeldinger.
-
-Hvis modellen er gyldig, logges registreringen og modellen sendes videre til `Overview.cshtml`.
-
-### Registrerings-view
-
-`WebApplicationInAspire/Views/Resource/Register.cshtml` inneholder registreringsskjemaet.
-
-Skjemaet bruker ASP.NET Tag Helpers som `asp-for` og `asp-validation-for` for modellfeltene. `Latitude` og `Longitude` sendes som skjulte input-felter.
-
-### Leaflet og dataflyt
-
-Leaflet brukes til å la brukeren velge en geografisk posisjon.
-
-Dataflyten for kartpunktet er:
-
-1. Brukeren klikker på kartet.
-2. Leaflet henter `lat` og `lng` fra klikket.
-3. En markør opprettes eller flyttes til den valgte posisjonen.
-4. `Latitude` skrives til det skjulte `Latitude`-feltet.
-5. `Longitude` skrives til det skjulte `Longitude`-feltet.
-6. Når skjemaet sendes inn, blir koordinatene sendt til `ResourceController` sammen med resten av modellen.
-7. På `Overview.cshtml` leses `Latitude` og `Longitude` fra modellen.
-8. Kartet sentreres på koordinatene, og en markør plasseres på samme sted.
-9. Markøren får en popup med ressursens navn.
-
----
-
-## 3. Drift og kjøring
-
-### 3.1 Kjøre webapplikasjonen lokalt
-
-Kjør fra roten av repositoryet:
-
-```
-dotnet run --project WebApplicationInAspire/WebApplicationInAspire.csproj
+```powershell
+dotnet restore WebApplicationInAspire.slnx --locked-mode
+dotnet build WebApplicationInAspire.slnx --configuration Release --no-restore
+dotnet test WebApplicationInAspire.Tests --configuration Release --no-build --filter "Category!=Integration"
+node --test WebApplicationInAspire.Tests/resource-position.test.cjs
 ```
 
-Prosjektets `launchSettings.json` angir følgende lokale adresser:
+### HTTP-/system-/sikkerhetstester mot isolert MariaDB
 
-```
-http://localhost:5011
-https://localhost:7018
-```
+Bruk bare en separat testserver. Testene oppretter og sletter sine egne databaser med prefikset `is202_test_`; de skal aldri kjøres mot prosjektets arbeidsdatabase. Standardoppsettet under deler verken volum eller port med appens database.
 
-### 3.2 Kjøre med .NET Aspire
-
-AppHost ligger i `WebApplicationInAspire.AppHost/` og registrerer webprosjektet slik:
-
-```
-builder.AddProject<Projects.WebApplicationInAspire>("webapplicationinaspire");
+```powershell
+$env:TEST_DB_PASSWORD = "velg-et-lokalt-testpassord"
+docker compose -p is202-tests -f compose.tests.yaml up -d --wait
+$env:TEST_DB_CONNECTION_STRING = "Server=127.0.0.1;Port=43325;User ID=root;Password=$env:TEST_DB_PASSWORD;Database=is202_test;"
+dotnet test WebApplicationInAspire.slnx --configuration Release --no-build --logger "trx;LogFileName=tests.trx" --results-directory TestResults
+docker compose -p is202-tests -f compose.tests.yaml down
 ```
 
-Start AppHost fra roten av repositoryet:
+På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECTION_STRING="Server=127.0.0.1;Port=43325;User ID=root;Password=$TEST_DB_PASSWORD;Database=is202_test;"`. Når variabelen ikke er satt, rapporteres integrasjonstestene som **Skipped**, ikke Bestått. CI setter variabelen og kjører alle testene mot en MariaDB-service. Build og test bruker samme Release-konfigurasjon. Testresultater lagres som TRX-artifact i GitHub Actions; Docker-imaget bygges også.
 
-```
-dotnet run --project WebApplicationInAspire.AppHost/WebApplicationInAspire.AppHost.csproj
-```
+**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **45/45 .NET-tester og 4/4 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
 
-Aspire starter webprosjektet som er registrert i AppHost og viser prosjektet i Aspire-dashboardet.
+| Testområde / testnavn | Steg og forventning | Faktisk lokalt resultat |
+|---|---|---|
+| `ValidationTests`, `ResourceControllerTests` (33) | Send manglende/omvendt tidsrom, ugyldige koordinater, for lange felt, feil eier og rollekombinasjoner; avvis feil og ikke lagre. | Bestått |
+| `Registration_stores_hashed_password_and_cannot_choose_admin_role` | Registrer via HTTP med forsøkt adminfelt; hash lagres, bare leverandørrolle opprettes. | Bestått |
+| `Resource_CRUD_preserves_owner_period_and_database_values` | Registrer/rediger/les/slett med ekte cookies/token; kontroller eier, tidsrom og databaseverdier. GET skal ikke slette. | Bestått |
+| `Invalid_period_and_coordinates_return_errors_without_insert` | Send ugyldige datoer/koordinater via HTTP; skjema/feil vises og ingen rad opprettes. | Bestått |
+| `Roles_ownership_CSRF_and_encoded_content_are_enforced_by_HTTP_pipeline` | Anonym/feil eier/rolle avvises; manglende token gir 400; scripttekst gjengis kodet. | Bestått |
+| `Public_and_regional_overview_hide_private_unavailable_and_legacy_periods` | Sammenlign leverandør/offentlig oversikt og utskrift; skjulte tilbud skal ikke lekke. | Bestått |
+| `Login_rejects_external_return_url_and_locks_after_five_failures` | Prøv ekstern returadresse og fem feilpassord; ingen ekstern redirect, konto låses. | Bestått |
+| `Need_HTTP_flow_matches_assigns_releases_and_resolves` | Opprett behov, match, tildel, frigi, tildel igjen og løs; status og tilgjengelighet følger hverandre. | Bestått |
+| `Matching_honors_period_boundaries_and_rejects_forged_out_of_period_assignment` | Test start/sluttgrense og tilbud som slutter for tidlig; feil tidsrom kan ikke tildeles med direkte kall. | Bestått |
+| `Concurrent_needs...`, `Same_need_claim...` | To behov konkurrerer om én ressurs og to ressurser om ett behov; nøyaktig én vinner, tapende endring rulles tilbake, tildelt ressurs kan ikke endres/slettes. | Bestått |
+| `Data_survives_new_application_host...`, `Upgrade_from_previous_release...` | Start ny appinstans og oppgrader tidligere migrasjon med eldre ressurs; bevar data og la ukjente datoer være null. | Bestått |
+| `resource-position.test.cjs` (4) | Manglende Leaflet, kartflisfeil, manuelle koordinater og klikk i sperret skjema. | Bestått |
 
-### 3.3 Docker
+Nettleserkontroll samme dato: registrering med manuelle koordinater og tidsrom, omvendt tidsrom med tydelig feil, redigering og visning i oversikt. Ved bredde 390 px fungerte mobilmenyen og skjemaet hadde ingen horisontal overflow. Dette var automatisert nettleserkontroll, ikke en brukervennlighetstest med en uavhengig person. Tidligere 62 engangskontroller av matching/sikkerhet ble kjørt før denne endringen; de skal ikke forveksles med de 45 gjentakbare testene i repoet.
 
-Prosjektet bruker en multi-stage Dockerfile i roten av repositoryet.
+### Brukervennlighetstest - må utføres av gruppa
 
-Dockerfilen består av to steg:
+**Ikke gjennomført eller dokumentert som personstudie i denne PR-en.** La en person som ikke har bygget funksjonen prøve med syntetiske data, gjerne på faktisk mobil:
 
-- `mcr.microsoft.com/dotnet/sdk:10.0` brukes til restore, build og publish.
-- `mcr.microsoft.com/dotnet/aspnet:10.0` brukes som et mindre runtime-image.
+1. Registrer en ressurs med tidsrom og posisjon.
+2. Rett et ugyldig tidsrom eller manglende posisjon uten hjelp.
+3. Som offentlig bruker: finn match, tildel og frigi en ressurs.
+4. Finn regional liste og forklar ressursens status.
 
-Applikasjonen eksponeres på port `8080` i containeren.
+Noter dato, testet commit/enhet, oppgave, tid, fullført uten hjelp, feil/stoppunkter og forbedring. Fyll inn faktiske observasjoner i README før dere påstår at dette oppgavekravet er gjennomført. Ikke skriv oppdiktede deltakere eller resultater.
 
-#### Bygge Docker-imaget
+## Demo til sprint review 5
 
-Kjør fra roten av repositoryet:
+Start Compose og klargjør én leverandør og én offentlig demobruker. Bruk samme type/region og la behovets tidspunkt ligge innenfor ressursens tidsrom.
 
-```
-docker build -t resource-registration .
-```
+Vis registrering/kartpunkt og manuell reserve, lagrede data, redigering, rolleforskjell, behov, matching, tildeling, tidlig frigjøring og Løst, regionfilter/utskrift og mobilvisning. Vis at en tildelt ressurs ikke kan slettes. Åpne GitHub Actions-testresultatene. Det separate visuelle designutkastet fra chatten er ikke en del av denne branchen.
 
-#### Kjøre containeren
+## Bruk av KI
 
-```
-docker run --rm -p 8080:8080 resource-registration
-```
+KI er brukt som støtte til planlegging, kodeforslag, feilsøking, kodegjennomgang, tester og dokumentasjon. Den tidligere dokumentasjonen oppga GitHub Copilot til MVC/Leaflet, koordinatvalidering og Docker-feilsøking. KI-støttet testing erstatter ikke brukervennlighetstesting med faktiske personer.
 
-Åpne deretter:
+## Avgrensninger og videre arbeid
 
-```
-http://localhost:8080/Resource/Register
-```
-
-#### Kontrollere containeren
-
-Kjør:
-
-```
-docker ps
-```
-
-Containeren skal stå som kjørende. Hvis den stopper, kan loggene undersøkes med:
-
-```
-docker logs <container-id>
-```
-
-### Docker-verifisering
-
-Docker-verifiseringen kontrollerer følgende:
-
-- [x] `docker build` fullføres uten feil.
-- [x] Containeren starter uten feil.
-- [x] Webapplikasjonen åpnes på `http://localhost:8080`.
-- [x] Registreringssiden kan åpnes.
-- [x] Leaflet-kartet vises.
-- [x] Et kartpunkt kan velges.
-- [x] Registreringen kan sendes til Overview.
-- [x] Overview viser registrerte data og kartmarkør.
-
-**Faktisk resultat:** Docker-imaget ble bygget lokalt, og containeren startet på port `8080`. Registreringsskjemaet med Leaflet-kart og innsending til oversiktssiden fungerte som forventet.
-
----
-
-## 4. Testscenarier og resultater
-
-### Test 1 – Fyll ut skjema og velg kartpunkt
-
-#### Fremgangsmåte
-
-1. Åpne `/Resource/Register`.
-2. Fyll inn navn, type, beskrivelse, kontaktperson og telefonnummer.
-3. Klikk på et punkt i Leaflet-kartet.
-4. Kontroller at markøren flyttes til valgt punkt.
-5. Send inn skjemaet.
-
-#### Forventet resultat
-
-Kartpunktet registreres som `Latitude` og `Longitude`, og hele modellen sendes med POST til `ResourceController`.
-
-#### Faktisk resultat
-
-Skjemaet ble sendt inn uten feil. Valgt kartpunkt ble registrert som `Latitude` og `Longitude`, og alle utfylte verdier ble vist på Overview-siden.
-
-**Status:** Bestått
-
-### Test 2 – POST sender data til Overview
-
-#### Fremgangsmåte
-
-1. Registrer en ressurs med alle obligatoriske felter.
-2. Velg et punkt på kartet.
-3. Trykk på **Registrer**.
-4. Kontroller Overview-siden.
-
-#### Forventet resultat
-
-Controlleren mottar modellen og returnerer Overview med samme ressursdata. Overview skal vise navn, type, beskrivelse, kontaktperson, telefonnummer, `Latitude` og `Longitude`. Kartet skal vise en markør på de registrerte koordinatene.
-
-#### Faktisk resultat
-
-Skjemaet ble sendt inn, og Overview-siden viste samme ressursdata som ble registrert. Navn, type, beskrivelse, kontaktperson, telefonnummer, `Latitude` og `Longitude` ble vist, sammen med et oppdatert kart med markør og popup.
-
-**Status:** Bestått
-
-### Test 3 – Validering ved manglende felt
-
-#### Fremgangsmåte
-
-1. Åpne registreringsskjemaet.
-2. La ett eller flere obligatoriske felt stå tomme, eller la være å velge et punkt i kartet.
-3. Send inn skjemaet.
-
-#### Forventet resultat
-
-`ModelState.IsValid` skal være `false`, og controlleren skal returnere registrerings-viewet i stedet for å sende brukeren til Overview. Tilhørende feilmeldinger skal vises.
-
-#### Faktisk resultat
-
-Ved manglende felter eller manglende lokasjon i kartet stoppet innsendingen, og tilhørende valideringsmeldinger ble vist med rød tekst under de respektive feltene.
-
-**Status:** Bestått
-
-### Test 4 – Docker-verifisering
-
-#### Fremgangsmåte
-
-```
-docker build -t resource-registration .
-docker run --rm -p 8080:8080 resource-registration
-```
-
-Åpne deretter:
-
-```
-http://localhost:8080/Resource/Register
-```
-
-#### Forventet resultat
-
-Docker-imaget bygges, containeren starter, og webapplikasjonen kan åpnes og brukes gjennom nettleseren.
-
-#### Faktisk resultat
-
-Docker-imaget ble bygget uten feil. Containeren startet som forventet, og webapplikasjonen var tilgjengelig på `localhost:8080`. Registreringssiden med Leaflet-kart kunne åpnes og brukes.
-
-**Status:** Bestått
-
----
-
-## 5. Testoversikt
-
-| Test | Forventet resultat | Faktisk resultat | Status |
-|---|---|---|---|
-| Skjema + kartpunkt | Koordinater lagres og sendes med modellen | Koordinater ble registrert og sendt med modellen | Bestått |
-| POST → Overview | Registrerte data og riktig kartpunkt vises | Overview viser registrerte data og korrekt markør i kartet | Bestått |
-| Manglende felt | Validering stopper innsending og viser skjemaet på nytt | Skjemaet stoppet innsending og viste valideringsfeil | Bestått |
-| Docker | Image bygges og applikasjonen kjører i container | Image ble bygget uten feil og kjørte på port 8080 | Bestått |
-
----
-
-## 6. Bruk av kunstig intelligens (KI)
-
-I henhold til oppgavekravene er kunstig intelligens benyttet som støtte- og læringsverktøy gjennom prosjektet, fra idé og planlegging til koding, feilsøking og dokumentasjon.
-
-### Verktøy benyttet
-
-- **GitHub Copilot:** Kodeassistent direkte i IDE/VS Code for kodeforslag og maler. Vi brukte de også som sparringspartner for systemarkitektur, feilsøking av Docker- og kulturrelaterte problemer og strukturering av dokumentasjon.
-
-### Bruksområder
-
-#### Idé og arkitektur
-
-- Diskusjon rundt MVC-mønsteret.
-- Vurdering av hvordan klikkhendelser i Leaflet-kartet kan bindes mot ASP.NET Model Binding via skjulte felter.
-
-#### Koding og validering
-
-- Oppsett av `ResourceViewModel` med Data Annotations for validering.
-- Håndtering av formateringsproblemer, blant annet desimalkomma kontra desimalpunktum ved bruk av `CultureInfo.InvariantCulture` mellom Leaflet og C#.
-
-#### Drift og Docker
-
-- Kvalitetssikring av multi-stage Dockerfile for .NET 10.
-
-#### Feilsøking
-
-- Feilsøking av valideringsfeilen `The value is not valid for Latitude`.
-- Feilsøking av `CS1501`-kompileringsfeil ved `ToString`-formatering av nullable datatyper.
-
-### Eksempler på faktiske prompts
-
-> Hvordan setter jeg opp Leaflet.js slik at et klikk i kartet oppdaterer to skjulte inputfelter med Latitude og Longitude i et ASP.NET Core MVC-skjema?
-
-> Hvorfor får jeg "The value is not valid for Latitude" i ASP.NET Core når Leaflet sender inn koordinater med desimalpunktum?
-
-> Hvordan håndterer jeg at ResourceViewModel har nullable doubles for kartkoordinater slik at [Required] faktisk feiler hvis kartet ikke er klikket på?
-
----
-
-## 7. Konklusjon
-
-Applikasjonen implementerer en MVC-basert ressursregistrering der Leaflet brukes til å velge geografisk posisjon. `ResourceController` mottar registreringsdataene og sender en gyldig modell videre til Overview.
-
-.NET Aspire AppHost brukes til å starte webprosjektet, og Docker kan brukes til å bygge og kjøre webapplikasjonen som en container.
-
-Dokumentasjonen beskriver arkitekturen, dataflyten, kjøring med .NET Aspire og Docker samt testene som er gjennomført for å verifisere funksjonaliteten.
+- Reell personbasert brukervennlighetstest og dens resultater gjenstår som beskrevet over.
+- Matching bruker type, region og behovets tidspunkt; avstandssøk, e-postvarsling, vedlegg og audit-logg er ikke implementert.
+- Ressursenes tilgjengelighet vedlikeholdes manuelt. Ingen automatisk bekreftelse mot fysiske forhold.
+- Ressursens tidsrom dekker ett tidspunkt for behovet; booking av flere tidsperioder og behovsvarighet støttes ikke.
+- Norske lokale tidspunkter kan være tvetydige ved sommertid; løsningen er ikke sertifisert for operativ krisehåndtering eller produksjonsdrift.

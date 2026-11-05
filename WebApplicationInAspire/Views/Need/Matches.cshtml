@@ -2,7 +2,7 @@
 @model WebApplicationInAspire.Models.NeedMatchesViewModel
 @{ ViewData["Title"] = "Ressurser for behovet"; }
 <h1 class="h2">Ressurser for @Model.Need.Type</h1>
-<p>Region: <strong>@Model.Need.Region</strong>. Treff krever samme type og region. Bare tilgjengelige ressurser vises.</p>
+<p>Region: <strong>@Model.Need.Region</strong>. Treff krever samme type og region. Ressursen må også være tilgjengelig på behovets tidspunkt, @Model.Need.NeededAt.ToString("dd.MM.yyyy HH:mm") (norsk tid).</p>
 <a asp-action="Overview" class="btn btn-secondary mb-3">Til behovsoversikten</a>
 @if (Model.Need.Status == NeedStatuses.Assigned)
 {
@@ -25,6 +25,7 @@ else
             <h2 class="h4">@resource.Name</h2>
             <p>@resource.Description</p>
             <p>@resource.Type · @resource.Region</p>
+            <p><partial name="_ResourcePeriod" model="resource" /> (norsk tid)</p>
             <p>Kontakt: @resource.ContactName · @resource.PhoneNumber</p>
             @if (Model.CanManage)
             {

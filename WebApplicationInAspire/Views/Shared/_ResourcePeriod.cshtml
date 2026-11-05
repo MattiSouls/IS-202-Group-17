@@ -1,0 +1,9 @@
+@model WebApplicationInAspire.Models.Entities.Resource
+@if (Model.AvailableFrom.HasValue && Model.AvailableUntil.HasValue)
+{
+    <span>@Model.AvailableFrom.Value.ToString("dd.MM.yyyy HH:mm") – @Model.AvailableUntil.Value.ToString("dd.MM.yyyy HH:mm")</span>
+}
+else
+{
+    <span>Tidsrom mangler – eier må oppdatere</span>
+}

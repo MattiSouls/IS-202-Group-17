@@ -22,15 +22,7 @@
             <span asp-validation-for="Type" class="text-danger"></span>
         </div>
 
-        <div class="mb-3">
-        <label asp-for="Region" class="form-label">Region:</label>
-        <input asp-for="Region" class="form-control" />
-        <span asp-validation-for="Region" class="text-danger"></span>
-    </div>
-    <div class="form-check mb-3">
-        <input asp-for="IsAvailable" class="form-check-input" />
-        <label asp-for="IsAvailable" class="form-check-label"></label>
-    </div>
+    <partial name="_ResourceAvailability" model="Model" />
     <div class="mb-3">
             <label asp-for="Description" class="form-label">Beskrivelse:</label>
             <textarea asp-for="Description" class="form-control" rows="3"></textarea>
@@ -49,15 +41,7 @@
             <span asp-validation-for="PhoneNumber" class="text-danger"></span>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Posisjon (klikk i kartet):</label>
-            <div id="map" style="height: clamp(260px, 50vh, 480px); width: 100%; border-radius: 8px;" class="border"></div>
-            <span asp-validation-for="Latitude" class="text-danger d-block mt-1"></span>
-        </div>
-
-        <!-- Skjulte inputs for koordinater som fylles ut via kartklikk -->
-        <input type="hidden" asp-for="Latitude" id="Latitude" />
-        <input type="hidden" asp-for="Longitude" id="Longitude" />
+    <partial name="_ResourcePosition" model="Model" />
 
         <button type="submit" class="btn btn-primary mt-2">Registrer</button>
     </form>
@@ -67,51 +51,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
 
-    <script>
-        // Oppretter Leaflet-kartet i div-en med id="map", sentrert på Kristiansand/Agder
-        var map = L.map('map').setView([58.1467, 7.9956], 13);
-
-        // Henter fliser fra OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap-bidragsytere'
-        }).addTo(map);
-
-        var latitudeInput = document.getElementById('Latitude');
-var longitudeInput = document.getElementById('Longitude');
-
-var latitude = Number(latitudeInput.value);
-var longitude = Number(longitudeInput.value);
-
-var hasPosition =
-    latitudeInput.value.trim() !== '' &&
-    longitudeInput.value.trim() !== '' &&
-    Number.isFinite(latitude) &&
-    Number.isFinite(longitude) &&
-    Math.abs(latitude) <= 90 &&
-    Math.abs(longitude) <= 180;
-
-var marker = null;
-
-// Gjenoppretter markøren hvis skjemaet har blitt sendt inn med valideringsfeil.
-if (hasPosition) {
-    marker = L.marker([latitude, longitude]).addTo(map);
-    map.setView([latitude, longitude], 13);
-}
-
-// Lytter etter klikk på kartet.
-map.on('click', function (e) {
-    var lat = e.latlng.lat;
-    var lng = e.latlng.lng;
-
-    if (marker) {
-        marker.setLatLng(e.latlng);
-    } else {
-        marker = L.marker(e.latlng).addTo(map);
-    }
-
-    latitudeInput.value = lat;
-    longitudeInput.value = lng;
-});
-    </script>
+    <script src="~/js/resource-position.js" asp-append-version="true"></script>
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 }

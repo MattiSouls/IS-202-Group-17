@@ -38,6 +38,7 @@
                         <dl>
                             <dt>Type</dt><dd>@resource.Type</dd>
                             <dt>Region</dt><dd>@(string.IsNullOrWhiteSpace(resource.Region) ? "Ikke oppgitt - eier må oppdatere" : resource.Region)</dd>
+                            <dt>Tidsrom (norsk tid)</dt><dd><partial name="_ResourcePeriod" model="resource" /></dd>
                             <dt>Beskrivelse</dt><dd>@resource.Description</dd>
                             <dt>Kontaktperson</dt><dd>@resource.ContactName</dd>
                             <dt>Telefonnummer</dt><dd>@resource.PhoneNumber</dd>
