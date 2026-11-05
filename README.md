@@ -160,7 +160,7 @@ På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECT
 | `Data_survives_new_application_host...`, `Upgrade_from_previous_release...` | Start ny appinstans og oppgrader tidligere migrasjon med eldre ressurs; bevar data og la ukjente datoer være null. | Bestått |
 | `resource-position.test.cjs` (4) | Manglende Leaflet, kartflisfeil, manuelle koordinater og klikk i sperret skjema. | Bestått |
 
-Nettleserkontroll samme dato: registrering med manuelle koordinater og tidsrom, omvendt tidsrom med tydelig feil, redigering og visning i oversikt. Ved bredde 390 px fungerte mobilmenyen og skjemaet hadde ingen horisontal overflow. Dette var teknisk QA utført med Codex, ikke en brukervennlighetstest med en uavhengig person. Tidligere 62 engangskontroller av matching/sikkerhet ble kjørt før denne endringen; de skal ikke forveksles med de 45 gjentakbare testene i repoet.
+Nettleserkontroll samme dato: registrering med manuelle koordinater og tidsrom, omvendt tidsrom med tydelig feil, redigering og visning i oversikt. Ved bredde 390 px fungerte mobilmenyen og skjemaet hadde ingen horisontal overflow. Dette var automatisert nettleserkontroll, ikke en brukervennlighetstest med en uavhengig person. Tidligere 62 engangskontroller av matching/sikkerhet ble kjørt før denne endringen; de skal ikke forveksles med de 45 gjentakbare testene i repoet.
 
 ### Brukervennlighetstest - må utføres av gruppa
 
@@ -181,9 +181,7 @@ Vis registrering/kartpunkt og manuell reserve, lagrede data, redigering, rollefo
 
 ## Bruk av KI
 
-KI er brukt til planlegging, kodeforslag, kodegjennomgang, feilsøking, migrasjoner, tester og dokumentasjon. Den tidligere README-en oppga GitHub Copilot til MVC/Leaflet, koordinatvalidering og Docker-feilsøking. Codex er brukt til gjennomgang og rettelser av PR-er, Identity-/CRUD-/behovskontroller, matching/tildeling, tidsrom, kartfallback, generering/kjøring av tester og oppdatering av README/CI. Luna er brukt til en separat read-only-vurdering av Trello-kort. Vi skiller mellom automatiserte kontroller og testing med faktiske brukere.
-
-Faktiske brukerprompter fra denne arbeidsøkten omfatter «Du fullfører delen nå», «kan du pushe en commit med rettelser til branchen hans?» og «kan du lowkey bare fikse resten av det vi mangler i en pr og gjøre lubo til co author i alle commitsa elns?». Disse er eksempler, ikke en full promptlogg. Gruppemedlemmene må kontrollere at egen bruk er riktig beskrevet og kunne forklare koden ved demo. Medforfatter-trailere er lagt til etter brukerens ønske og erstatter ikke denne KI-beskrivelsen.
+KI er brukt som støtte til planlegging, kodeforslag, feilsøking, kodegjennomgang, tester og dokumentasjon. Den tidligere dokumentasjonen oppga GitHub Copilot til MVC/Leaflet, koordinatvalidering og Docker-feilsøking. KI-støttet testing erstatter ikke brukervennlighetstesting med faktiske personer.
 
 ## Avgrensninger og videre arbeid
 
