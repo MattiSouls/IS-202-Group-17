@@ -46,11 +46,21 @@
                             <p><strong>Kontaktperson:</strong> @need.ContactName</p>
                             <p><strong>Telefon:</strong> @need.PhoneNumber</p>
                             <p><strong>Status:</strong> @statuses.GetValueOrDefault(need.Status, need.Status)</p>
+                            <p><a asp-action="Matches" asp-route-id="@need.Id" class="btn btn-outline-primary">Se ressurser for behovet</a></p>
                             @if (need.CreatedByUserId == userId || User.IsInRole(RoleNames.Admin))
                             {
                                 @if (need.Status == NeedStatuses.Assigned)
                                 {
-                                    <p>Tildelte behov håndteres gjennom tildelingsflyten.</p>
+                                    <p><strong>Tildelt ressurs:</strong> @need.AssignedResource?.Name</p>
+                                    <form asp-action="Release" method="post" class="mb-2">
+                                        <input type="hidden" name="id" value="@need.Id" />
+                                        <button type="submit" class="btn btn-outline-primary">Frigi ressurs, behold behov</button>
+                                    </form>
+                                    <form asp-action="UpdateStatus" method="post">
+                                        <input type="hidden" name="id" value="@need.Id" />
+                                        <input type="hidden" name="status" value="Resolved" />
+                                        <button type="submit" class="btn btn-success">Løs behov og frigi ressurs</button>
+                                    </form>
                                 }
                                 else
                                 {

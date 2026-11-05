@@ -1,0 +1,30 @@
+@model WebApplicationInAspire.Models.ResourceOverviewViewModel
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ressursliste - @Model.Region</title>
+    <style>
+        body{font-family:Arial,sans-serif;max-width:1100px;margin:24px auto;padding:0 16px;color:#172b3a}
+        table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;border:1px solid #aaa;padding:8px;overflow-wrap:anywhere}
+        th{background:#eee}button{padding:10px 16px;margin-bottom:20px}caption{text-align:left;margin:10px 0}
+        @@media print{.no-print{display:none}body{margin:0;max-width:none}thead{display:table-header-group}tr{break-inside:avoid}}
+    </style>
+</head>
+<body>
+    <h1>Ressursliste - @Model.Region</h1>
+    <p>@(Model.IsPublicOverview ? "Tilgjengelige ressurser i regionen" : "Dine ressurser i regionen")</p>
+    <button type="button" class="no-print" onclick="window.print()">Skriv ut</button>
+    <table><caption>@Model.Resources.Count @(Model.Resources.Count == 1 ? "ressurs" : "ressurser")</caption>
+        <thead><tr><th>Navn</th><th>Type</th><th>Region</th><th>Kontaktperson</th><th>Telefon</th><th>Status</th></tr></thead>
+        <tbody>
+        @foreach (var resource in Model.Resources)
+        {
+            <tr><td>@resource.Name</td><td>@resource.Type</td><td>@resource.Region</td><td>@resource.ContactName</td><td>@resource.PhoneNumber</td>
+                <td>@(Model.AssignedResourceIds.Contains(resource.Id) ? "Tildelt" : resource.IsAvailable ? "Tilgjengelig" : "Ikke tilgjengelig")</td></tr>
+        }
+        </tbody>
+    </table>
+</body>
+</html>

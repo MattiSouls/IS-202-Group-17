@@ -1,46 +1,60 @@
-﻿@model WebApplicationInAspire.Models.ResourceViewModel
+@model WebApplicationInAspire.Models.ResourceViewModel
 
 @{
     ViewData["Title"] = "Rediger ressurs";
 }
 
 <h2>Rediger ressurs</h2>
+@if (ViewData["IsAssigned"] is true)
+{
+    <div class="alert alert-warning">Ressursen er tildelt. Den offentlige brukeren må frigi den før du kan redigere.</div>
+}
 
 <form method="post" asp-controller="Resource" asp-action="Edit" asp-route-id="@Model.Id">
     <input type="hidden" asp-for="Id" />
+    <fieldset disabled="@(ViewData["IsAssigned"] is true)">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-    <div>
+    <div class="mb-3">
         <label asp-for="Name">Navn:</label>
-        <input asp-for="Name" />
+        <input asp-for="Name" class="form-control" />
         <span asp-validation-for="Name"></span>
     </div>
 
-    <div>
+    <div class="mb-3">
         <label asp-for="Type">Type:</label>
-        <input asp-for="Type" />
+        <input asp-for="Type" class="form-control" />
         <span asp-validation-for="Type"></span>
     </div>
 
-    <div>
+    <div class="mb-3">
+        <label asp-for="Region" class="form-label">Region:</label>
+        <input asp-for="Region" class="form-control" />
+        <span asp-validation-for="Region" class="text-danger"></span>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="IsAvailable" class="form-check-input" />
+        <label asp-for="IsAvailable" class="form-check-label"></label>
+    </div>
+    <div class="mb-3">
         <label asp-for="Description">Beskrivelse:</label>
-        <input asp-for="Description" />
+        <input asp-for="Description" class="form-control" />
         <span asp-validation-for="Description"></span>
     </div>
 
-    <div>
+    <div class="mb-3">
         <label asp-for="ContactName">Kontaktperson:</label>
-        <input asp-for="ContactName" />
+        <input asp-for="ContactName" class="form-control" />
         <span asp-validation-for="ContactName"></span>
     </div>
 
-    <div>
+    <div class="mb-3">
         <label asp-for="PhoneNumber">Telefonnummer:</label>
-        <input asp-for="PhoneNumber" />
+        <input asp-for="PhoneNumber" class="form-control" />
         <span asp-validation-for="PhoneNumber"></span>
     </div>
 
-    <div>
+    <div class="mb-3">
         <label>Posisjon (klikk i kartet):</label>
         <div id="map" style="height: clamp(260px, 50vh, 480px); border: 1px solid black;"></div>
     </div>
@@ -51,8 +65,9 @@
     <span asp-validation-for="Longitude"></span>
 
     <br />
-    <button type="submit">Lagre endringer</button>
-    <a asp-action="Overview">Avbryt</a>
+    <button type="submit" class="btn btn-primary">Lagre endringer</button>
+    <a asp-action="Overview" class="btn btn-secondary">Avbryt</a>
+    </fieldset>
 </form>
 
 @section Scripts {

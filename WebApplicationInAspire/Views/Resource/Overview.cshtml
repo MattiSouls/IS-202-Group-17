@@ -1,61 +1,72 @@
-@model IReadOnlyList<WebApplicationInAspire.Models.Entities.Resource>
-
-@{
-    ViewData["Title"] = "Mine ressurser";
-}
-
+@using System.Security.Claims
+@using WebApplicationInAspire.Security
+@model WebApplicationInAspire.Models.ResourceOverviewViewModel
+@{ ViewData["Title"] = Model.IsPublicOverview ? "Tilgjengelige ressurser" : "Mine ressurser"; }
 <div class="container mt-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h1>Mine ressurser</h1>
-        <a asp-action="Register" class="btn btn-primary">Registrer ny ressurs</a>
+        <h1 class="h2">@ViewData["Title"]</h1>
+        @if (User.IsInRole(RoleNames.ResourceProvider) || User.IsInRole(RoleNames.Admin))
+        { <a asp-action="Register" class="btn btn-primary">Registrer ny ressurs</a> }
     </div>
-
-    @if (Model.Count == 0)
-    {
-        <p>Du har ikke registrert noen ressurser ennå.</p>
-    }
+    @if (TempData["ErrorMessage"] is string error)
+    { <div class="alert alert-warning" role="alert">@error</div> }
+    <form method="get" asp-action="Overview" class="row g-2 align-items-end mb-4">
+        <div class="col-12 col-sm-6 col-lg-4">
+            <label for="region" class="form-label">Region</label>
+            <select name="region" id="region" class="form-select">
+                <option value="">Alle regioner</option>
+                @foreach (var region in Model.Regions)
+                { <option value="@region" selected="@string.Equals(region, Model.Region, StringComparison.OrdinalIgnoreCase)">@region</option> }
+            </select>
+        </div>
+        <div class="col-auto"><button type="submit" class="btn btn-primary">Filtrer</button></div>
+        @if (!string.IsNullOrWhiteSpace(Model.Region))
+        { <div class="col-auto"><a asp-action="RegionalList" asp-route-region="@Model.Region" target="_blank" class="btn btn-outline-secondary">Utskriftsvennlig liste</a></div> }
+    </form>
+    @if (Model.Resources.Count == 0)
+    { <p>Ingen ressurser å vise med dette filteret.</p> }
     else
     {
         <div class="row g-3">
-            @foreach (var resource in Model)
+            @foreach (var resource in Model.Resources)
             {
-                <div class="col-12 col-lg-6">
-                    <article class="card h-100">
-                        <div class="card-body">
-                            <h2 class="h4 card-title">@resource.Name</h2>
-                            <dl>
-                                <dt>Type</dt>
-                                <dd>@resource.Type</dd>
-                                <dt>Beskrivelse</dt>
-                                <dd>@resource.Description</dd>
-                                <dt>Kontaktperson</dt>
-                                <dd>@resource.ContactName</dd>
-                                <dt>Telefonnummer</dt>
-                                <dd>@resource.PhoneNumber</dd>
-                                <dt>Posisjon (breddegrad, lengdegrad)</dt>
-                                <dd>@resource.Latitude, @resource.Longitude</dd>
-                            </dl>
-                            <a asp-action="Edit" asp-route-id="@resource.Id" class="btn btn-outline-primary">Rediger</a>
-                            <a asp-action="Delete" asp-route-id="@resource.Id" class="btn btn-outline-danger">Slett</a>
-                        </div>
-                    </article>
+                var assigned = Model.AssignedResourceIds.Contains(resource.Id);
+                <div class="col-12 col-md-6 col-xl-4">
+                    <article class="card h-100"><div class="card-body">
+                        <h2 class="h4">@resource.Name</h2>
+                        <p><span class="badge @(assigned ? "bg-primary" : resource.IsAvailable ? "bg-success" : "bg-secondary")">@(assigned ? "Tildelt" : resource.IsAvailable ? "Tilgjengelig" : "Ikke tilgjengelig")</span></p>
+                        <dl>
+                            <dt>Type</dt><dd>@resource.Type</dd>
+                            <dt>Region</dt><dd>@(string.IsNullOrWhiteSpace(resource.Region) ? "Ikke oppgitt - eier må oppdatere" : resource.Region)</dd>
+                            <dt>Beskrivelse</dt><dd>@resource.Description</dd>
+                            <dt>Kontaktperson</dt><dd>@resource.ContactName</dd>
+                            <dt>Telefonnummer</dt><dd>@resource.PhoneNumber</dd>
+                        </dl>
+                        @if (resource.OwnerId == User.FindFirstValue(ClaimTypes.NameIdentifier) || User.IsInRole(RoleNames.Admin))
+                        {
+                            @if (assigned) { <p>Frigi tildelingen før redigering eller sletting.</p> }
+                            else
+                            {
+                                <a asp-action="Edit" asp-route-id="@resource.Id" class="btn btn-outline-primary">Rediger</a>
+                                <a asp-action="Delete" asp-route-id="@resource.Id" class="btn btn-outline-danger">Slett</a>
+                            }
+                        }
+                    </div></article>
                 </div>
             }
         </div>
-
         <h2 class="h4 mt-4">Ressursenes plassering</h2>
         <div id="overviewMap" class="border rounded" style="height: clamp(260px, 50vh, 480px);"></div>
     }
 </div>
-
 @section Scripts {
-    @if (Model.Count > 0)
+    @if (Model.Resources.Count > 0)
     {
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
             // Vis ressursnavn som tekst slik at brukerinnhold ikke tolkes som HTML.
-            const resources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(resource => new
+            const resources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Resources.Select(resource => new
             {
                 name = resource.Name,
                 latitude = resource.Latitude,

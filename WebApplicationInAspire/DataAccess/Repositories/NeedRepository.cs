@@ -7,13 +7,14 @@ namespace WebApplicationInAspire.DataAccess.Repositories;
 public class NeedRepository(ApplicationDbContext context) : INeedRepository
 {
     public async Task<IReadOnlyList<Need>> GetAllAsync(CancellationToken cancellationToken = default)
-        => await context.Needs.AsNoTracking()
+        => await context.Needs.AsNoTracking().Include(need => need.AssignedResource)
             .OrderBy(need => need.NeededAt)
             .ThenBy(need => need.Id)
             .ToListAsync(cancellationToken);
 
     public Task<Need?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-        => context.Needs.AsNoTracking().SingleOrDefaultAsync(need => need.Id == id, cancellationToken);
+        => context.Needs.AsNoTracking().Include(need => need.AssignedResource)
+            .SingleOrDefaultAsync(need => need.Id == id, cancellationToken);
 
     public async Task<Need> AddAsync(Need need, CancellationToken cancellationToken = default)
     {

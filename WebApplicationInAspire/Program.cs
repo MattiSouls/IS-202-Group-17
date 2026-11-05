@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using WebApplicationInAspire.DataAccess;
 using WebApplicationInAspire.DataAccess.Repositories;
 using WebApplicationInAspire.Security;
+using WebApplicationInAspire.Services;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
@@ -30,6 +31,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, new MariaDbServerVersion(new Version(11, 4, 0))));
 builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
 builder.Services.AddScoped<INeedRepository, NeedRepository>();
+builder.Services.AddScoped<AllocationService>();
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {

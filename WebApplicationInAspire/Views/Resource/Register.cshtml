@@ -1,4 +1,4 @@
-﻿@model WebApplicationInAspire.Models.ResourceViewModel
+@model WebApplicationInAspire.Models.ResourceViewModel
 
 @{
     ViewData["Title"] = "Registrer ressurs";
@@ -23,6 +23,15 @@
         </div>
 
         <div class="mb-3">
+        <label asp-for="Region" class="form-label">Region:</label>
+        <input asp-for="Region" class="form-control" />
+        <span asp-validation-for="Region" class="text-danger"></span>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="IsAvailable" class="form-check-input" />
+        <label asp-for="IsAvailable" class="form-check-label"></label>
+    </div>
+    <div class="mb-3">
             <label asp-for="Description" class="form-label">Beskrivelse:</label>
             <textarea asp-for="Description" class="form-control" rows="3"></textarea>
             <span asp-validation-for="Description" class="text-danger"></span>
@@ -42,7 +51,7 @@
 
         <div class="mb-3">
             <label class="form-label">Posisjon (klikk i kartet):</label>
-            <div id="map" style="height: 400px; width: 100%; border-radius: 8px;" class="border"></div>
+            <div id="map" style="height: clamp(260px, 50vh, 480px); width: 100%; border-radius: 8px;" class="border"></div>
             <span asp-validation-for="Latitude" class="text-danger d-block mt-1"></span>
         </div>
 
