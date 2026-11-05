@@ -98,6 +98,20 @@ Nettleser (skjema, kart og koordinater)
 
 Tildeling låser/oppdaterer ressursen før behovet. Bare én forespørsel kan ta ressursen, og en tapende tildeling rulles tilbake. Redigering/sletting bruker samme låserekkefølge og kontrollerer aktiv tildeling. Testene bruker ekte MariaDB fordi EF InMemory ikke verifiserer transaksjoner, SQL eller låsing.
 
+### Kravsporbarhet for Oppgave 2
+
+| Oppgavekrav | Implementasjon | Kontroll |
+|---|---|---|
+| MVC, GET/POST, skjema og kartpunkt | ResourceController, ResourceViewModel, Razor, resource-position.js | Resource_CRUD, valideringstester, nettleserregistrering og JavaScript-testene |
+| App og MariaDB i Docker, varig lagring | compose.yaml, ApplicationDbContext og Migrations | Docker-oppstart, Data_survives_new_application_host og Upgrade_from_previous_release |
+| Registrering og databaselagret bruker | AccountController og Identity | Registration_stores_hashed_password |
+| Autentisering, autorisasjon og ressurs-CRUD | Account/ResourceController, rollenavn og repositories | Roles_ownership_CSRF, Login_rejects_external_return_url, Resource_CRUD |
+| Offentlige behov, status, matching og regional liste | NeedController, AllocationService, RegionalList | Need_HTTP_flow, Matching_honors_period, samtidighetstestene og Public_and_regional_overview |
+| Ressursens tidspunkt/frister | AvailableFrom/AvailableUntil i modell/skjema/database/matching | ValidationTests, Invalid_period og Matching_honors_period |
+| Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Nettleserkontroll ved 390 px; reell person-/mobiltest gjenstår |
+| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 45 .NET + 4 JavaScript bestått lokalt; personstudien er ikke utført her |
+| Drift, arkitektur, kode- og KI-dokumentasjon | Denne README-en og kommentarer ved sentral kode | Sammenhold kjøreinstruksjoner, testnavn og faktisk kildekode; gruppa kontrollerer egen KI-beskrivelse |
+
 ### Sikkerhet
 
 Identity hasher passord, krever minst åtte tegn med stor/liten bokstav og tall, og låser konto i fem minutter etter fem feil. Cookies er HttpOnly. POST-handlinger har antiforgery, og rolle-/eierskapskontroll utføres på serveren. Registreringsfelt kan ikke gi adminrolle eller endre ressursens eier. Brukerinnhold vises kodet, også i kartpopup. Database-/kontopassord ligger i lokal konfigurasjon, ikke i repoet. Web kjører som ikke-root-bruker i containeren.
