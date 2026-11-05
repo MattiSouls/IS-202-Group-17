@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +58,16 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.HttpOnly = true;
     options.SlidingExpiration = true;
     options.ExpireTimeSpan = TimeSpan.FromHours(1);
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        await SecurityStampValidator.ValidatePrincipalAsync(context);
+        if (context.Principal?.HasClaim("DemoSession", "true") == true
+            && (!builder.Environment.IsDevelopment() || !builder.Configuration.GetValue<bool>("Demo:Enabled")))
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        }
+    };
 });
 
 var app = builder.Build();
