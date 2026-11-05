@@ -7,11 +7,13 @@ using WebApplicationInAspire.Security;
 
 namespace WebApplicationInAspire.Controllers;
 
+/// <summary>Registrering og innlogging med Identity, leverandørrolle og trygg lokal returadresse.</summary>
 public class AccountController(
     UserManager<IdentityUser> userManager,
     SignInManager<IdentityUser> signInManager,
     ILogger<AccountController> logger) : Controller
 {
+    /// <summary>Viser registreringsskjemaet.</summary>
     [HttpGet]
     [AllowAnonymous]
     public IActionResult Register()
@@ -19,6 +21,7 @@ public class AccountController(
         return View(new RegisterViewModel());
     }
 
+    /// <summary>Oppretter brukeren med hash og leverandørrolle; ruller tilbake hvis rolletildeling feiler.</summary>
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
@@ -54,6 +57,7 @@ public class AccountController(
         return RedirectToAction("Index", "Home");
     }
 
+    /// <summary>Viser innlogging og bevarer ønsket returadresse.</summary>
     [HttpGet]
     [AllowAnonymous]
     public IActionResult Login(string? returnUrl = null)
@@ -61,6 +65,7 @@ public class AccountController(
         return View(new LoginViewModel { ReturnUrl = returnUrl });
     }
 
+    /// <summary>Logger inn med Identity-låsing og avviser eksterne returadresser.</summary>
     [HttpPost]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
@@ -90,6 +95,7 @@ public class AccountController(
         return View(model);
     }
 
+    /// <summary>Logger ut ved antiforgery-beskyttet POST.</summary>
     [HttpPost]
     [Authorize]
     [ValidateAntiForgeryToken]
@@ -99,6 +105,7 @@ public class AccountController(
         return RedirectToAction("Index", "Home");
     }
 
+    /// <summary>Viser at den innloggede brukeren mangler tilgang.</summary>
     [HttpGet]
     [AllowAnonymous]
     public IActionResult AccessDenied()
@@ -106,6 +113,7 @@ public class AccountController(
         return View();
     }
 
+    /// <summary>Godtar kun lokale returadresser for å hindre åpen redirect.</summary>
     private string SafeReturnUrl(string? returnUrl)
     {
         return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)

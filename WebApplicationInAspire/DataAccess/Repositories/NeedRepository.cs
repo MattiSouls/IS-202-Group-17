@@ -9,6 +9,7 @@ namespace WebApplicationInAspire.DataAccess.Repositories;
 /// <summary>Lagrer og leser behov i MariaDB med samme DbContext som ressurser og Identity.</summary>
 public class NeedRepository(ApplicationDbContext context) : INeedRepository
 {
+    /// <summary>Filtrerer og sorterer behov i SQL, med valgfritt eierfilter og avgrenset side.</summary>
     public async Task<NeedListViewModel> SearchAsync(ListFilter filter, string userId)
     {
         filter.Sanitize();
@@ -16,16 +17,14 @@ public class NeedRepository(ApplicationDbContext context) : INeedRepository
         var regions = await query.Select(n => n.Region).Distinct().OrderBy(v => v).Take(200).ToListAsync();
         if (filter.Mine) query = query.Where(n => n.CreatedByUserId == userId);
         if (NeedStatusesForFilter.Contains(filter.Status ?? "")) query = query.Where(n => n.Status == filter.Status);
-        if (filter.Status is "uncovered" or "urgent" or "time-passed") query = query.Where(n => n.AssignedResourceId == null && (n.Status == NeedStatuses.New || n.Status == NeedStatuses.UnderReview));
+        if (filter.Status is "uncovered" or "urgent" or "time-passed") query = query.Uncovered();
         if (filter.Status == "urgent") query = query.Where(n => n.Priority == "Urgent");
         if (filter.Status == "time-passed") { var now = PortalDisplay.NorwayNow; query = query.Where(n => n.NeededAt < now); }
         if (!string.IsNullOrWhiteSpace(filter.Region)) { var region = MatchingRules.Normalize(filter.Region); query = query.Where(n => n.Region.Trim().ToUpper() == region); }
         if (!string.IsNullOrWhiteSpace(filter.Q)) { var term = filter.Q; query = query.Where(n => n.Type.Contains(term) || n.Region.Contains(term) || (n.Location != null && n.Location.Contains(term))); }
         var total = await query.CountAsync();
         filter.Page = Math.Min(filter.Page, Math.Max(1, (total + ListFilter.PageSize - 1) / ListFilter.PageSize));
-        var rows = await query.Include(n => n.AssignedResource).OrderBy(n => n.Status == NeedStatuses.Resolved)
-            .ThenByDescending(n => n.Priority == "Urgent").ThenByDescending(n => n.Priority == "High")
-            .ThenByDescending(n => n.Priority == "Medium").ThenBy(n => n.NeededAt).ThenBy(n => n.Id)
+        var rows = await query.Include(n => n.AssignedResource).InPriorityOrder()
             .Skip((filter.Page - 1) * ListFilter.PageSize).Take(ListFilter.PageSize).ToListAsync();
         return new NeedListViewModel { Needs = rows, Total = total, Filter = filter, Regions = regions };
     }
@@ -41,16 +40,12 @@ public class NeedRepository(ApplicationDbContext context) : INeedRepository
             .SetProperty(n => n.AreaNorth, need.AreaNorth).SetProperty(n => n.AreaEast, need.AreaEast)
             .SetProperty(n => n.Version, n => n.Version + 1)) == 1;
 
-    public async Task<IReadOnlyList<Need>> GetAllAsync(CancellationToken cancellationToken = default)
-        => await context.Needs.AsNoTracking().Include(need => need.AssignedResource)
-            .OrderBy(need => need.NeededAt)
-            .ThenBy(need => need.Id)
-            .ToListAsync(cancellationToken);
-
+    /// <summary>Henter ett behov med eventuell tildelt ressurs.</summary>
     public Task<Need?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         => context.Needs.AsNoTracking().Include(need => need.AssignedResource)
             .SingleOrDefaultAsync(need => need.Id == id, cancellationToken);
 
+    /// <summary>Lagrer behovet og gjenbruker tidligere resultat ved dobbelt registreringskall.</summary>
     public async Task<Need> AddAsync(Need need, CancellationToken cancellationToken = default)
     {
         context.Needs.Add(need);

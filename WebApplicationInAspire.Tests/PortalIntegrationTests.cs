@@ -280,16 +280,20 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
         var (email, http) = await Login(); using var session = http;
         var name = "CRUD " + Guid.NewGuid().ToString("N");
         var fields = PortalHttp.ResourceFields(name); fields["OwnerId"] = "forged";
+        fields["Id"] = "999999"; fields["Version"] = "999"; fields["CreationToken"] = Guid.Empty.ToString();
         Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync("/Resource/Register", fields, "/Resource/Register")).StatusCode);
         await using var db = database.Context();
         var resource = await db.Resources.AsNoTracking().SingleAsync(row => row.Name == name);
         Assert.Equal(await UserId(email), resource.OwnerId);
+        Assert.NotEqual(999999, resource.Id); Assert.Equal(0, resource.Version); Assert.NotEqual(Guid.Empty, resource.CreationToken);
+        fields["Version"] = "0";
         Assert.Equal(new DateTime(2026, 11, 1, 8, 0, 0), resource.AvailableFrom);
         fields["Id"] = resource.Id.ToString(); fields["Name"] = name + " endret"; fields["IsAvailable"] = "false";
         fields["AvailableUntil"] = "2026-11-20T18:00";
         Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync($"/Resource/Edit/{resource.Id}", fields, $"/Resource/Edit/{resource.Id}")).StatusCode);
         resource = await db.Resources.AsNoTracking().SingleAsync(row => row.Id == resource.Id);
         Assert.False(resource.IsAvailable); Assert.Equal(20, resource.AvailableUntil!.Value.Day);
+        Assert.Equal(await UserId(email), resource.OwnerId); Assert.Equal(1, resource.Version);
         Assert.Contains(name + " endret", await http.Client.GetStringAsync("/Resource/Overview"));
         (await http.Client.GetAsync($"/Resource/Delete/{resource.Id}")).EnsureSuccessStatusCode();
         Assert.True(await db.Resources.AnyAsync(row => row.Id == resource.Id)); // GET sletter ikke.

@@ -7,11 +7,13 @@ using WebApplicationInAspire.Models;
 
 namespace WebApplicationInAspire.Controllers;
 
+/// <summary>Leser og markerer bare den innloggede brukerens egne varsler.</summary>
 [Authorize]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class NotificationsController(ApplicationDbContext database) : Controller
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+    /// <summary>Filtrerer og paginerer private varsler; ulest-tallet gjelder alle egne varsler.</summary>
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1, string? filter = null)
     {
@@ -25,8 +27,10 @@ public class NotificationsController(ApplicationDbContext database) : Controller
         return View(new NotificationList(await query.OrderByDescending(n => n.Id).Skip((page - 1) * 20).Take(20).ToListAsync(),
             unread, page, total, selectedFilter));
     }
+    /// <summary>Gir antall egne uleste varsler til toppmenyen.</summary>
     [HttpGet]
     public async Task<IActionResult> Unread() => Json(new { count = await database.Notifications.CountAsync(n => n.UserId == UserId && n.ReadAtUtc == null) });
+    /// <summary>Markerer ett eget varsel som lest; andres ID-er avvises.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Read(long id, string? filter = null, int page = 1)
     {
@@ -36,6 +40,7 @@ public class NotificationsController(ApplicationDbContext database) : Controller
         TempData["SuccessMessage"] = "Varselet er markert som lest.";
         return RedirectToAction(nameof(Index), new { filter = FilterName(filter), page = Math.Max(1, page) });
     }
+    /// <summary>Markerer kun egne varsler som lest og beholder valgt filter.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ReadAll(string? filter = null)
     {
@@ -44,5 +49,6 @@ public class NotificationsController(ApplicationDbContext database) : Controller
         TempData["SuccessMessage"] = "Alle varslene dine er markert som lest.";
         return RedirectToAction(nameof(Index), new { filter = FilterName(filter) });
     }
+    /// <summary>Tillater bare kjente lesefiltre; ukjente verdier viser alle egne varsler.</summary>
     private static string FilterName(string? filter) => filter is "unread" or "read" ? filter : "all";
 }

@@ -13,6 +13,9 @@ namespace WebApplicationInAspire.Controllers;
 [Authorize(Roles = RoleNames.PublicUser + "," + RoleNames.Admin)]
 public class NeedController(INeedRepository repository, AllocationService allocation, ILogger<NeedController> logger) : Controller
 {
+    private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+    private bool IsAdmin => User.IsInRole(RoleNames.Admin);
+
     /// <summary>Viser skjemaet for et nytt behov.</summary>
     [HttpGet]
     public IActionResult Register() => View(new NeedViewModel());
@@ -33,25 +36,8 @@ public class NeedController(INeedRepository repository, AllocationService alloca
             return Challenge();
         }
 
-        var need = new Need
-        {
-            Type = model.Type.Trim(),
-            CreationToken = model.RequestId,
-            Latitude = model.Latitude,
-            Longitude = model.Longitude,
-            AreaSouth = model.AreaSouth,
-            AreaWest = model.AreaWest,
-            AreaNorth = model.AreaNorth,
-            AreaEast = model.AreaEast,
-            Region = model.Region.Trim(),
-            Location = model.Location,
-            NeededAt = model.NeededAt!.Value,
-            Priority = model.Priority,
-            ContactName = model.ContactName,
-            PhoneNumber = model.PhoneNumber,
-            CreatedByUserId = userId,
-            Status = NeedStatuses.New
-        };
+        var need = new Need { CreatedByUserId = userId, CreationToken = model.RequestId, Status = NeedStatuses.New };
+        model.ApplyTo(need);
         await repository.AddAsync(need);
         logger.LogInformation("Behov {NeedId} opprettet av bruker {UserId}", need.Id, userId);
         TempData["SuccessMessage"] = "Behovet er registrert.";
@@ -60,7 +46,7 @@ public class NeedController(INeedRepository repository, AllocationService alloca
 
     /// <summary>Viser lagrede behov for offentlige brukere og administratorer.</summary>
     [HttpGet]
-    public async Task<IActionResult> Overview([FromQuery] ListFilter filter) => View(await repository.SearchAsync(filter, User.FindFirstValue(ClaimTypes.NameIdentifier) ?? ""));
+    public async Task<IActionResult> Overview([FromQuery] ListFilter filter) => View(await repository.SearchAsync(filter, CurrentUserId));
 
     /// <summary>Viser ledige ressurser med samme type og region som behovet.</summary>
     [HttpGet]
@@ -76,10 +62,11 @@ public class NeedController(INeedRepository repository, AllocationService alloca
             Resources = await allocation.FindMatchesAsync(need, page),
             Page = page,
             Total = total,
-            CanManage = need.CreatedByUserId == User.FindFirstValue(ClaimTypes.NameIdentifier) || User.IsInRole(RoleNames.Admin)
+            CanManage = need.CreatedByUserId == CurrentUserId || IsAdmin
         });
     }
 
+    /// <summary>Viser behov og de siste tildelingshendelsene for offentlige brukere.</summary>
     [HttpGet]
     public async Task<IActionResult> Details(int id)
     {
@@ -89,6 +76,7 @@ public class NeedController(INeedRepository repository, AllocationService alloca
         return View(need);
     }
 
+    /// <summary>Åpner redigering bare for oppretter/admin og et behov uten aktiv tildeling.</summary>
     [HttpGet]
     public async Task<IActionResult> Edit(int id)
     {
@@ -115,6 +103,7 @@ public class NeedController(INeedRepository repository, AllocationService alloca
             AreaEast = need.AreaEast
         });
     }
+    /// <summary>Lagrer validerte felt med versjonskontroll og beholder verdier ved konflikt.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, NeedViewModel model)
     {
@@ -123,10 +112,8 @@ public class NeedController(INeedRepository repository, AllocationService alloca
         if (need is null) return NotFound();
         if (!CanManage(need)) return Forbid();
         if (!ModelState.IsValid) return View("Register", model);
-        need.Version = model.Version; need.Type = model.Type; need.Region = model.Region; need.Location = model.Location;
-        need.NeededAt = model.NeededAt!.Value; need.Priority = model.Priority; need.ContactName = model.ContactName;
-        need.PhoneNumber = model.PhoneNumber; need.Latitude = model.Latitude; need.Longitude = model.Longitude;
-        need.AreaSouth = model.AreaSouth; need.AreaWest = model.AreaWest; need.AreaNorth = model.AreaNorth; need.AreaEast = model.AreaEast;
+        need.Version = model.Version;
+        model.ApplyTo(need);
         if (!await repository.EditAsync(need))
         {
             Response.StatusCode = 409;
@@ -136,8 +123,10 @@ public class NeedController(INeedRepository repository, AllocationService alloca
         TempData["SuccessMessage"] = "Behovet er oppdatert. Du kan nå finne passende ressurser.";
         return RedirectToAction(nameof(Details), new { id });
     }
-    private bool CanManage(Need need) => need.CreatedByUserId == User.FindFirstValue(ClaimTypes.NameIdentifier) || User.IsInRole(RoleNames.Admin);
+    /// <summary>Behovets oppretter eller administrator kan endre behovet.</summary>
+    private bool CanManage(Need need) => need.CreatedByUserId == CurrentUserId || IsAdmin;
 
+    /// <summary>Viser tildelings- eller frigivelsesbekreftelsen uten å endre data.</summary>
     [HttpGet]
     public async Task<IActionResult> Review(int id, int resourceId = 0, string operation = "assign")
     {
@@ -152,6 +141,7 @@ public class NeedController(INeedRepository repository, AllocationService alloca
         return View(new AssignmentReview(need, resource, operation));
     }
 
+    /// <summary>Bekrefter tillatt manuell statusendring for oppretter/admin.</summary>
     [HttpGet]
     public async Task<IActionResult> ReviewStatus(int id, string status)
     {
@@ -171,18 +161,20 @@ public class NeedController(INeedRepository repository, AllocationService alloca
         if (!needVersion.HasValue || !resourceVersion.HasValue) return BadRequest("Åpne bekreftelsen på nytt før tildeling.");
         ViewData["NeedId"] = id;
         return AllocationResponse(await allocation.AssignAsync(id, resourceId,
-            User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "", User.IsInRole(RoleNames.Admin), needVersion, resourceVersion), "Ressursen er tildelt. Varsel er lagret til de berørte brukerne.", id);
+            CurrentUserId, IsAdmin, needVersion, resourceVersion), "Ressursen er tildelt. Varsel er lagret til de berørte brukerne.", id);
     }
 
+    /// <summary>Frigir ressursen via transaksjonen og kontrollerer bekreftelsens versjon.</summary>
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Release(int id, long? needVersion = null)
     {
         if (!needVersion.HasValue) return BadRequest("Åpne bekreftelsen på nytt før frigivelse.");
         ViewData["NeedId"] = id;
         return AllocationResponse(await allocation.ReleaseAsync(id,
-            User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "", User.IsInRole(RoleNames.Admin), false, needVersion), "Ressursen er frigitt. Behovet vurderes igjen.", id);
+            CurrentUserId, IsAdmin, false, needVersion), "Ressursen er frigitt. Behovet vurderes igjen.", id);
     }
 
+    /// <summary>Oversetter tjenestens resultat til redirect, tilgangsfeil eller konfliktvisning.</summary>
     private IActionResult AllocationResponse(AllocationResult result, string message, int? id = null)
     {
         if (result == AllocationResult.NotFound) return NotFound();
@@ -214,16 +206,12 @@ public class NeedController(INeedRepository repository, AllocationService alloca
             return NotFound();
         }
 
-        if (need.CreatedByUserId != User.FindFirstValue(ClaimTypes.NameIdentifier)
-            && !User.IsInRole(RoleNames.Admin))
-        {
-            return Forbid();
-        }
+        if (!CanManage(need)) return Forbid();
 
         if (need.Status == NeedStatuses.Assigned && status == NeedStatuses.Resolved)
         {
             return AllocationResponse(await allocation.ReleaseAsync(id,
-                User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "", User.IsInRole(RoleNames.Admin), true, needVersion),
+                CurrentUserId, IsAdmin, true, needVersion),
                 "Behovet er løst og ressursen er frigitt.", id);
         }
 

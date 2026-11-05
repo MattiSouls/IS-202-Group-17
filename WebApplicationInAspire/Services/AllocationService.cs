@@ -10,11 +10,15 @@ public enum AllocationResult { Success, NotFound, Forbidden, Conflict }
 /// <summary>Matching og tildeling. Ressurs og behov endres samlet i en MariaDB-transaksjon.</summary>
 public class AllocationService(ApplicationDbContext context)
 {
+    /// <summary>Leser de siste 30 historikkhendelsene for behovet.</summary>
     public async Task<IReadOnlyList<AllocationEvent>> HistoryAsync(int id) => await context.AllocationEvents.AsNoTracking().Where(e => e.NeedId == id).OrderByDescending(e => e.Id).Take(30).ToListAsync();
 
+    /// <summary>Kontrollerer én kandidat med de samme kravene som trefflisten.</summary>
     public Task<Resource?> FindCandidateAsync(Need need, int id) => MatchingRules.CanAssign(need) ? Candidates(need).SingleOrDefaultAsync(r => r.Id == id) : Task.FromResult<Resource?>(null);
+    /// <summary>Henter én ressurs uten å laste kandidatlisten.</summary>
     public Task<Resource?> GetResourceAsync(int id) => context.Resources.AsNoTracking().SingleOrDefaultAsync(r => r.Id == id);
 
+    /// <summary>Krever ledighet, kategori, dekkende tidsrom og region eller gyldig kartområde.</summary>
     private IQueryable<Resource> CandidateFilter(Need need)
     {
         var type = MatchingRules.Normalize(need.Type);
@@ -29,6 +33,7 @@ public class AllocationService(ApplicationDbContext context)
         return query.Where(r => r.Region.Trim().ToUpper() == region);
     }
 
+    /// <summary>Sorterer kandidater i SQL etter luftlinje, ellers navn og ID.</summary>
     private IQueryable<Resource> Candidates(Need need)
     {
         var query = CandidateFilter(need);
@@ -44,6 +49,7 @@ public class AllocationService(ApplicationDbContext context)
         }
         return query.OrderBy(resource => resource.Name).ThenBy(resource => resource.Id);
     }
+    /// <summary>Teller treff uten å laste ressursradene.</summary>
     public Task<int> CountMatchesAsync(Need need) => MatchingRules.CanAssign(need)
         ? Candidates(need).CountAsync() : Task.FromResult(0);
 
@@ -82,8 +88,7 @@ public class AllocationService(ApplicationDbContext context)
             .ExecuteUpdateAsync(update => update.SetProperty(item => item.AssignedResourceId, resourceId)
                 .SetProperty(item => item.Status, NeedStatuses.Assigned).SetProperty(item => item.Version, item => item.Version + 1));
         if (assigned != 1) return AllocationResult.Conflict; // Dispose ruller tilbake ressursendringen.
-        context.AllocationEvents.Add(new AllocationEvent { NeedId = need.Id, ResourceId = resource.Id, ActorUserId = userId, Action = "Assigned", ResourceName = resource.Name });
-        AddNotices(need, resource, "Ressurs tildelt", $"{resource.Name} er tildelt behov #{need.Id}: {need.Type} i {need.Region}, {need.NeededAt:dd.MM.yyyy HH:mm}. Se tildelingen for kontakt og praktisk oppfølging.");
+        RecordChange(need, resource, userId, "Assigned", "Ressurs tildelt", $"{resource.Name} er tildelt behov #{need.Id}: {need.Type} i {need.Region}, {need.NeededAt:dd.MM.yyyy HH:mm}. Se tildelingen for kontakt og praktisk oppfølging.");
         await context.SaveChangesAsync();
         await transaction.CommitAsync();
         return AllocationResult.Success;
@@ -115,19 +120,20 @@ public class AllocationService(ApplicationDbContext context)
             .ExecuteUpdateAsync(update => update.SetProperty(item => item.AssignedResourceId, (int?)null)
                 .SetProperty(item => item.Status, resolve ? NeedStatuses.Resolved : NeedStatuses.UnderReview).SetProperty(item => item.Version, item => item.Version + 1));
         if (changed != 1) return AllocationResult.Conflict;
-        context.AllocationEvents.Add(new AllocationEvent { NeedId = need.Id, ResourceId = resource.Id, ActorUserId = userId, Action = resolve ? "Resolved" : "Released", ResourceName = resource.Name });
-        AddNotices(need, resource, resolve ? "Behov løst" : "Ressurs frigitt",
+        RecordChange(need, resource, userId, resolve ? "Resolved" : "Released", resolve ? "Behov løst" : "Ressurs frigitt",
             $"{resource.Name} er frigitt fra behov #{need.Id}: {need.Type} i {need.Region}. " + (resolve ? "Behovet er avsluttet." : "Behovet vurderes igjen."));
         await context.SaveChangesAsync();
         await transaction.CommitAsync();
         return AllocationResult.Success;
     }
-    private void AddNotices(Need need, Resource resource, string title, string message)
+    /// <summary>Historikk og ett varsel per berørt bruker lagres med den pågående transaksjonen.</summary>
+    private void RecordChange(Need need, Resource resource, string userId, string action, string title, string message)
     {
-        foreach (var userId in new[] { resource.OwnerId, need.CreatedByUserId }.Distinct())
+        context.AllocationEvents.Add(new AllocationEvent { NeedId = need.Id, ResourceId = resource.Id, ActorUserId = userId, Action = action, ResourceName = resource.Name });
+        foreach (var recipientId in new[] { resource.OwnerId, need.CreatedByUserId }.Distinct())
             context.Notifications.Add(new PortalNotification
             {
-                UserId = userId,
+                UserId = recipientId,
                 Title = title,
                 Message = message,
                 NeedId = need.Id,

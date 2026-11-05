@@ -10,8 +10,10 @@ using WebApplicationInAspire.Services;
 
 namespace WebApplicationInAspire.Controllers;
 
+/// <summary>Innlogget oversikt med rolletilpassede tall; offentlig forside uten innlogging.</summary>
 public class HomeController(ApplicationDbContext database) : Controller
 {
+    /// <summary>Viser et avgrenset øyeblikksbilde av behov, ressurser og brukerens private varsler.</summary>
     public async Task<IActionResult> Index(string? scope = null)
     {
         if (User.Identity?.IsAuthenticated != true) return View();
@@ -20,19 +22,15 @@ public class HomeController(ApplicationDbContext database) : Controller
         var isAdmin = User.IsInRole(RoleNames.Admin);
         var showAll = isAdmin ? scope != "mine" : scope == "all";
         var now = PortalDisplay.NorwayNow;
-        var resources = database.Resources.AsNoTracking();
-        if (!isPublic) resources = resources.Where(r => r.OwnerId == id);
-        else if (!User.IsInRole(RoleNames.Admin)) resources = resources.Where(r => r.IsAvailable && r.AvailableFrom != null && r.AvailableUntil > r.AvailableFrom && !database.Needs.Any(n => n.AssignedResourceId == r.Id && n.Status == NeedStatuses.Assigned));
+        var resources = database.VisibleResources(ownerId: isPublic ? null : id, offersOnly: isPublic && !isAdmin);
         var needs = database.Needs.AsNoTracking();
         if (isPublic && !showAll) needs = needs.Where(n => n.CreatedByUserId == id);
         var assigned = isPublic ? await needs.CountAsync(n => n.Status == NeedStatuses.Assigned)
             : await needs.CountAsync(n => n.Status == NeedStatuses.Assigned && n.AssignedResource != null && n.AssignedResource.OwnerId == id);
-        var uncovered = needs.Where(n => n.AssignedResourceId == null && (n.Status == NeedStatuses.New || n.Status == NeedStatuses.UnderReview));
+        var uncovered = needs.Uncovered();
         var summary = isPublic ? await uncovered.GroupBy(n => 1).Select(group => new
         { Total = group.Count(), Urgent = group.Count(n => n.Priority == "Urgent"), TimePassed = group.Count(n => n.NeededAt < now) }).SingleOrDefaultAsync() : null;
-        var upcoming = isPublic ? await uncovered.OrderByDescending(n => n.Priority == "Urgent")
-            .ThenByDescending(n => n.Priority == "High").ThenByDescending(n => n.Priority == "Medium")
-            .ThenBy(n => n.NeededAt).ThenBy(n => n.Id).Take(6).ToListAsync() : [];
+        var upcoming = isPublic ? await uncovered.InPriorityOrder().Take(6).ToListAsync() : [];
         var notices = database.Notifications.AsNoTracking().Where(n => n.UserId == id);
         return View(new DashboardViewModel
         {
@@ -45,11 +43,13 @@ public class HomeController(ApplicationDbContext database) : Controller
         });
     }
 
+    /// <summary>Forklarer lagring og bruk av konto-, kontakt- og kartopplysninger.</summary>
     public IActionResult Privacy()
     {
         return View();
     }
 
+    /// <summary>Viser feilreferanse uten interne feildetaljer.</summary>
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

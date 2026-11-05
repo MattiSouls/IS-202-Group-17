@@ -115,6 +115,8 @@ Nettleser (skjema, kart og koordinater)
 - `Models/*ViewModel.cs`: validerte skjemaer. `Models/Entities/` er databasemodellene.
 - `DataAccess/`: DbContext, repositories og versjonerte EF-migrasjoner.
 - `Services/AllocationService.cs`: matching og atomisk assign/release med betingede SQL-oppdateringer.
+- `DataAccess/PortalQueries.cs`: felles SQL-filtre for synlige ressurser, udekkede behov og prioritering.
+- `Models/FormMapping.cs`: eksplisitt kopiering av validerte skjemafelt; eier, ID, versjon og tildelingsstatus håndteres separat.
 - `Views/Shared/_Resource*.cshtml` og `wwwroot/js/resource-position.js`: delte tids-/posisjonsfelt og kartfallback.
 - `WebApplicationInAspire.Tests/`: xUnit/NSubstitute, HTTP-/MariaDB-integrasjonstester og JavaScript-tester.
 
