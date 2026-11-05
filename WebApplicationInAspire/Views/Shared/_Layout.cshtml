@@ -30,7 +30,11 @@
             <a asp-controller="Notifications" asp-action="Index" class="nav-entry @(section == "Notifications" ? "active" : "")" aria-current="@(section == "Notifications" ? "page" : null)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg> Varsler</a>
         }
         else
-        { <a asp-controller="Account" asp-action="Login" class="nav-entry">Logg inn</a><a asp-controller="Account" asp-action="Register" class="nav-entry">Registrer leverandør</a> }
+        {
+            <a asp-controller="Need" asp-action="Register" class="nav-entry"><span aria-hidden="true">＋</span> Registrer behov</a>
+            <a asp-controller="Account" asp-action="Login" class="nav-entry">Logg inn</a>
+            <a asp-controller="Account" asp-action="Register" class="nav-entry">Registrer leverandør</a>
+        }
     </nav>
     <div class="sidebar-bottom"><p class="eyebrow">GODT Å VITE</p><p>Kontakt leverandøren for å avtale praktisk bruk. Tilgjengelighet oppdateres av eieren.</p><a asp-controller="Home" asp-action="Privacy">Personvern og databruk</a></div>
 </aside>

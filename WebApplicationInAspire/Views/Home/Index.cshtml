@@ -1,7 +1,62 @@
 @using WebApplicationInAspire.Services
 @model WebApplicationInAspire.Models.DashboardViewModel
 @{ViewData["Title"]="Oversikt";}
-@if(Model is null){<section class="landing"><p class="eyebrow">SAMHANDLING I BEREDSKAP</p><h1>Riktig ressurs.<br/>På riktig sted.</h1><p>Samle tilbud, registrer behov og følg tildelingene i én oversiktlig arbeidsflate.</p><div class="actions"><a asp-controller="Account" asp-action="Login" class="btn btn-primary">Logg inn →</a><a asp-controller="Account" asp-action="Register" class="btn btn-secondary">Registrer ressursleverandør</a></div><div class="landing-grid"><article class="panel"><p class="eyebrow">01 / TILBUD</p><h2>Registrer det du kan bidra med</h2><p>Oppgi kategori, tidsrom, kontakt og posisjon. Hold tilbudet oppdatert.</p></article><article class="panel"><p class="eyebrow">02 / BEHOV</p><h2>Finn ressurser som passer</h2><p>Offentlige aktører matcher på kategori, region og tidspunkt.</p></article><article class="panel"><p class="eyebrow">03 / OPPFØLGING</p><h2>Vit hva som er tildelt</h2><p>Se tildelinger og varsler, og avtal praktisk bruk direkte.</p></article></div><p class="form-text mt-4">Offentlige brukerkontoer opprettes av portalens administrator. Registrering her gir leverandørtilgang.</p></section>}
+@if(Model is null)
+{
+    <section class="landing">
+        <div class="landing-hero">
+            <div class="hero-copy">
+                <p class="hero-kicker">SAMHANDLING I BEREDSKAP</p>
+                <h1>Riktig ressurs.<br/><span>På riktig sted.</span></h1>
+                <p class="hero-description">Samle ressursene, meld inn behov og finn frem til hverandre. Én felles oversikt når det gjelder.</p>
+                <div class="actions hero-actions">
+                    <a asp-controller="Need" asp-action="Register" class="btn btn-need">Registrer behov →</a>
+                    <a asp-controller="Resource" asp-action="Register" class="btn btn-hero-outline">Tilby en ressurs</a>
+                </div>
+                <p class="hero-access">Logg inn for å fortsette. Behov registreres av offentlige aktører.</p>
+            </div>
+            <div class="hero-visual" aria-hidden="true">
+                <div class="connection-map">
+                    <svg viewBox="0 0 400 270" focusable="false">
+                        <path class="map-river" d="M-20 235 C110 90 230 315 420 40"/>
+                        <path class="map-road" d="M-10 115 C95 155 135 35 220 85 S350 205 420 140"/>
+                        <path class="map-connection" d="M80 175 Q160 35 300 95"/>
+                        <circle cx="80" cy="175" r="28" fill="#f5c85a"/>
+                        <path d="M80 162v26m-13-13h26" stroke="#153d40" stroke-width="4"/>
+                        <circle cx="300" cy="95" r="28" fill="#8de2c5"/>
+                        <path d="m288 95 8 8 16-17" fill="none" stroke="#153d40" stroke-width="4"/>
+                        <circle cx="190" cy="208" r="8" fill="#8de2c5"/>
+                        <circle cx="330" cy="210" r="6" fill="#f5c85a"/>
+                    </svg>
+                    <span class="map-tag map-tag-need">Behov</span>
+                    <span class="map-tag map-tag-resource">Ressurs</span>
+                </div>
+                <div class="hero-connection"><span>Behov</span><span>→</span><span>Ressurs</span><span>→</span><strong>Samhandling</strong></div>
+            </div>
+        </div>
+        <div class="landing-grid">
+            <article class="panel landing-card needs-card">
+                <span class="landing-step">01</span><p class="eyebrow">FOR OFFENTLIGE AKTØRER</p>
+                <h2>Hva trenger dere?</h2><p>Registrer hva, hvor og når. Finn tilbud som passer behovet.</p>
+                <a asp-controller="Need" asp-action="Register">Registrer et behov →</a>
+            </article>
+            <article class="panel landing-card resources-card">
+                <span class="landing-step">02</span><p class="eyebrow">FOR RESSURSLEVERANDØRER</p>
+                <h2>Hva kan dere bidra med?</h2><p>Del ressurser med posisjon, tidsrom og riktig kontaktperson.</p>
+                <a asp-controller="Resource" asp-action="Register">Registrer en ressurs →</a>
+            </article>
+            <article class="panel landing-card followup-card">
+                <span class="landing-step">03</span><p class="eyebrow">FELLES OPPFØLGING</p>
+                <h2>Følg med hele veien</h2><p>Se tildelinger og varsler i portalen, og avtal praktisk bruk direkte.</p>
+                <a asp-controller="Account" asp-action="Login">Logg inn til oversikten →</a>
+            </article>
+        </div>
+        <div class="landing-access">
+            <p><strong>Ny ressursleverandør?</strong> <a asp-controller="Account" asp-action="Register">Opprett en leverandørkonto</a>.</p>
+            <p>Offentlige brukerkontoer opprettes av portalens administrator.</p>
+        </div>
+    </section>
+}
 else{
 <header class="page-heading home-heading"><div><p class="eyebrow">@(Model.IsPublic?"OFFENTLIG AKTØR":"RESSURSLEVERANDØR")</p><h1>Ressurser og behov på ett sted</h1><p>@(Model.IsPublic?"Følg behovene og finn tilbud som kan dekke dem.":"Hold tilbudene oppdatert og følg med når noen trenger ressursene dine.")</p></div><div class="actions">@if(Model.IsPublic){<a asp-controller="Need" asp-action="Register" class="btn btn-primary">＋ Registrer behov</a>}else{<a asp-controller="Resource" asp-action="Register" class="btn btn-primary">＋ Registrer ressurs</a>}</div></header>
 <div class="stat-grid"><a class="stat-card" asp-controller="Resource" asp-action="Overview"><span>@(Model.IsPublic?"Ressurser i portalen":"Mine ressurser")</span><strong>@Model.Resources</strong><small>Åpne oversikten →</small></a>

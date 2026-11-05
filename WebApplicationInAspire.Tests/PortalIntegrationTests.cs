@@ -66,6 +66,24 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
     }
 
     [MariaDbFact]
+    public async Task Landing_exposes_need_registration_and_login_returns_public_user_to_the_form()
+    {
+        using var http = new PortalHttp(database.Factory);
+        var landing = await http.Client.GetStringAsync("/");
+        Assert.Contains("href=\"/Need/Register\"", landing);
+        Assert.Contains("Registrer behov", landing);
+        Assert.Equal(HttpStatusCode.Redirect, (await http.Client.GetAsync("/Need/Register")).StatusCode);
+        var email = await database.UserAsync("PublicUser");
+        var response = await http.PostAsync("/Account/Login", new()
+        {
+            ["Email"] = email, ["Password"] = PortalHttp.Password, ["ReturnUrl"] = "/Need/Register"
+        }, "/Account/Login?returnUrl=%2FNeed%2FRegister");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Need/Register", response.Headers.Location!.ToString());
+        Assert.Contains("name=\"NeededAt\"", await http.Client.GetStringAsync("/Need/Register"));
+    }
+
+    [MariaDbFact]
     public async Task Registration_stores_hashed_password_and_cannot_choose_admin_role()
     {
         using var http = new PortalHttp(database.Factory);

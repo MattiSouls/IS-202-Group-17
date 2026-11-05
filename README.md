@@ -117,7 +117,7 @@ Tildeling låser/oppdaterer ressursen før behovet. Bare én forespørsel kan ta
 | Offentlige behov, status, matching og regional liste | NeedController, AllocationService, RegionalList | Need_HTTP_flow, Matching_honors_period, samtidighetstestene og Public_and_regional_overview |
 | Ressursens tidspunkt/frister | AvailableFrom/AvailableUntil i modell/skjema/database/matching | ValidationTests, Invalid_period og Matching_honors_period |
 | Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Nettleserkontroll av smal mobilvisning; reell person-/mobiltest gjenstår |
-| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 55 .NET + 4 JavaScript bestått lokalt; personstudien er ikke utført her |
+| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 56 .NET + 4 JavaScript bestått lokalt; personstudien er ikke utført her |
 | Drift, arkitektur, kode- og KI-dokumentasjon | Denne README-en og kommentarer ved sentral kode | Sammenhold kjøreinstruksjoner, testnavn og faktisk kildekode; gruppa kontrollerer egen KI-beskrivelse |
 
 ### Sikkerhet
@@ -151,7 +151,7 @@ docker compose -p is202-tests -f compose.tests.yaml down
 
 På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECTION_STRING="Server=127.0.0.1;Port=43325;User ID=root;Password=$TEST_DB_PASSWORD;Database=is202_test;"`. Når variabelen ikke er satt, rapporteres integrasjonstestene som **Skipped**, ikke Bestått. CI setter variabelen og kjører alle testene mot en MariaDB-service. Build og test bruker samme Release-konfigurasjon. Testresultater lagres som TRX-artifact i GitHub Actions; Docker-imaget bygges også.
 
-**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **55/55 .NET-tester og 4/4 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
+**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **56/56 .NET-tester og 4/4 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
 
 | Testområde / testnavn | Steg og forventning | Faktisk lokalt resultat |
 |---|---|---|

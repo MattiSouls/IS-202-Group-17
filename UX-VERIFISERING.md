@@ -35,10 +35,12 @@ Se [DRIFT.md](DRIFT.md) for skillet mellom det lokale miljøet og en ekstern dri
 ## Utført kontroll 5. november 2026
 
 - Release-build av hele løsningen: 0 feil og 0 advarsler.
-- 55 av 55 .NET-tester bestått mot en isolert MariaDB, ingen hoppet over; 4 av 4 JavaScript-tester bestått.
+- 56 av 56 .NET-tester bestått mot en isolert MariaDB, ingen hoppet over; 4 av 4 JavaScript-tester bestått.
 - EF rapporterte ingen modellendringer uten migrasjon. Oppgradering fra tidligere skjema bevarer eldre ressursdata.
 - Docker-web og MariaDB startet med helsesjekker. Varsler og tildeling var beholdt etter ombygging/omstart.
 - Nettleser med syntetiske kontoer: matching → bekreftelse → tildeling → leverandørvarsel/kontakt → marker lest → frigivelse → status/historikk.
 - Registrering med ugyldig og deretter gyldig navn, maksimal navnelengde, manuelle koordinater og tidsrom; verdier beholdt ved feil. Klientfeil flytter fokus til oppsummeringen, og feillenke flytter fokus til feltet.
 - Ved 320 CSS-piksler hadde ressursliste/skjema ingen horisontal side-overflow, heller ikke med et 200 tegn langt ord. Skrivebordsvisning kontrollert ved 1280 piksler. Ingen konsollfeil observert i den kontrollerte nettleserøkten.
 - Uavhengig personstudie, skjermleserrevisjon, reell nettverks-/lasttest og ekstern produksjonsdeploy er ikke gjennomført av disse kontrollene.
+
+Oppfølging av forsiden: mørk teal/grønn hovedseksjon, gul behovsknapp og tre fargede innganger. Utloggede brukere ser «Registrer behov» både på forsiden og i menyen. Knappen går via innlogging til behovsskjemaet; offentlig rolle kreves fortsatt. Egen HTTP-test og nettleserkontroll bekrefter retur til skjemaet. Forside kontrollert ved320/1280piksler uten horisontal side-overflow.
