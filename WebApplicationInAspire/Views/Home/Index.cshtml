@@ -1,17 +1,25 @@
 @using WebApplicationInAspire.Security
 @{ ViewData["Title"] = "Forside"; }
-<section class="py-4">
+<section class="home-intro">
+    <p class="eyebrow">BEREDSKAP / SAMHANDLING</p>
     <h1>Ressurser og behov på ett sted</h1>
     <p class="lead">Ressursportalen kobler offentlige behov med ressurser fra leverandører.</p>
+    <div class="home-actions">
     @if (User.Identity?.IsAuthenticated == true)
     {
-        <a asp-controller="Resource" asp-action="Overview" class="btn btn-primary mb-2">Se ressurser</a>
+        <a asp-controller="Resource" asp-action="Overview" class="btn btn-primary">Se ressurser</a>
         @if (User.IsInRole(RoleNames.PublicUser) || User.IsInRole(RoleNames.Admin))
-        { <a asp-controller="Need" asp-action="Overview" class="btn btn-outline-primary mb-2">Se behov og matching</a> }
+        { <a asp-controller="Need" asp-action="Overview" class="btn btn-outline-primary">Se behov og matching</a> }
     }
     else
     {
         <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Logg inn</a>
         <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary">Registrer deg som ressursleverandør</a>
     }
+    </div>
 </section>
+<div class="home-features">
+    <section><span class="eyebrow">01 / RESSURSER</span><h2>Oversikt over tilbud</h2><p>Finn type, tidsrom og kontaktinformasjon samlet på ett sted.</p></section>
+    <section><span class="eyebrow">02 / BEHOV</span><h2>Fra behov til tildeling</h2><p>Offentlige brukere kan registrere behov og finne passende ressurser.</p></section>
+    <section><span class="eyebrow">03 / KART</span><h2>Se plasseringen</h2><p>Bruk kartet sammen med ressurslisten for geografisk oversikt.</p></section>
+</div>

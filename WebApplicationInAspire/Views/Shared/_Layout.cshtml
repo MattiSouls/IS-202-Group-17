@@ -8,12 +8,13 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/WebApplicationInAspire.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/portal.css" asp-append-version="true" />
 </head>
-<body>
+<body class="portal-shell">
     <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-xl navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">Ressursportalen</a>
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index"><span class="brand-mark" aria-hidden="true">＋</span> Ressursportalen</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Vis navigasjon"><span class="navbar-toggler-icon"></span></button>
                 <div class="navbar-collapse collapse" id="mainNavigation">
                     <ul class="navbar-nav flex-grow-1">

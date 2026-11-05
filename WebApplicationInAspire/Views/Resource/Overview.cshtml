@@ -2,64 +2,79 @@
 @using WebApplicationInAspire.Security
 @model WebApplicationInAspire.Models.ResourceOverviewViewModel
 @{ ViewData["Title"] = Model.IsPublicOverview ? "Tilgjengelige ressurser" : "Mine ressurser"; }
-<div class="container mt-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h1 class="h2">@ViewData["Title"]</h1>
-        @if (User.IsInRole(RoleNames.ResourceProvider) || User.IsInRole(RoleNames.Admin))
-        { <a asp-action="Register" class="btn btn-primary">Registrer ny ressurs</a> }
+<section class="overview-hero">
+    <div>
+        <p class="eyebrow">BEREDSKAP / RESSURSOVERSIKT</p>
+        <h1>@ViewData["Title"]</h1>
+        <p class="hero-description">@(Model.IsPublicOverview ? "Finn ressurser som kan dekke offentlige behov." : "Hold oversikt over det du kan stille til rådighet.")</p>
     </div>
-    @if (TempData["ErrorMessage"] is string error)
-    { <div class="alert alert-warning" role="alert">@error</div> }
-    <form method="get" asp-action="Overview" class="row g-2 align-items-end mb-4">
-        <div class="col-12 col-sm-6 col-lg-4">
-            <label for="region" class="form-label">Region</label>
-            <select name="region" id="region" class="form-select">
-                <option value="">Alle regioner</option>
-                @foreach (var region in Model.Regions)
-                { <option value="@region" selected="@string.Equals(region, Model.Region, StringComparison.OrdinalIgnoreCase)">@region</option> }
-            </select>
-        </div>
-        <div class="col-auto"><button type="submit" class="btn btn-primary">Filtrer</button></div>
-        @if (!string.IsNullOrWhiteSpace(Model.Region))
-        { <div class="col-auto"><a asp-action="RegionalList" asp-route-region="@Model.Region" target="_blank" class="btn btn-outline-secondary">Utskriftsvennlig liste</a></div> }
-    </form>
-    @if (Model.Resources.Count == 0)
-    { <p>Ingen ressurser å vise med dette filteret.</p> }
-    else
-    {
-        <div class="row g-3">
+    @if (User.IsInRole(RoleNames.ResourceProvider) || User.IsInRole(RoleNames.Admin))
+    { <a asp-action="Register" class="btn btn-primary create-resource"><span aria-hidden="true">＋</span> Registrer ny ressurs</a> }
+</section>
+@if (TempData["ErrorMessage"] is string error)
+{ <div class="alert alert-warning" role="alert">@error</div> }
+<form method="get" asp-action="Overview" class="row g-2 align-items-end mb-4">
+    <div class="col-12 col-sm-6 col-lg-4">
+        <label for="region" class="form-label">Region</label>
+        <select name="region" id="region" class="form-select">
+            <option value="">Alle regioner</option>
+            @foreach (var region in Model.Regions)
+            { <option value="@region" selected="@string.Equals(region, Model.Region, StringComparison.OrdinalIgnoreCase)">@region</option> }
+        </select>
+    </div>
+    <div class="col-auto"><button type="submit" class="btn btn-primary">Filtrer</button></div>
+    @if (!string.IsNullOrWhiteSpace(Model.Region))
+    { <div class="col-auto"><a asp-action="RegionalList" asp-route-region="@Model.Region" target="_blank" class="btn btn-outline-secondary">Utskriftsvennlig liste</a></div> }
+</form>
+<div class="overview-toolbar">
+    <span><strong>@Model.Resources.Count</strong> @(Model.Resources.Count == 1 ? "ressurs" : "ressurser")</span>
+    <span class="toolbar-note">@(Model.IsPublicOverview ? "Tilbud, tidsrom og kontaktopplysninger" : "Dine ressurser og kontaktopplysninger")</span>
+</div>
+@if (Model.Resources.Count == 0)
+{
+    <div class="empty-resources"><h2>Ingen ressurser å vise med dette filteret.</h2><p>Velg en annen region eller kom tilbake når nye ressurser er registrert.</p></div>
+}
+else
+{
+    <div class="resource-workspace">
+        <section class="resource-list" aria-label="Ressursliste">
             @foreach (var resource in Model.Resources)
             {
                 var assigned = Model.AssignedResourceIds.Contains(resource.Id);
-                <div class="col-12 col-md-6 col-xl-4">
-                    <article class="card h-100"><div class="card-body">
-                        <h2 class="h4">@resource.Name</h2>
-                        <p><span class="badge @(assigned ? "bg-primary" : resource.IsAvailable ? "bg-success" : "bg-secondary")">@(assigned ? "Tildelt" : resource.IsAvailable ? "Tilgjengelig" : "Ikke tilgjengelig")</span></p>
-                        <dl>
-                            <dt>Type</dt><dd>@resource.Type</dd>
-                            <dt>Region</dt><dd>@(string.IsNullOrWhiteSpace(resource.Region) ? "Ikke oppgitt - eier må oppdatere" : resource.Region)</dd>
-                            <dt>Tidsrom (norsk tid)</dt><dd><partial name="_ResourcePeriod" model="resource" /></dd>
-                            <dt>Beskrivelse</dt><dd>@resource.Description</dd>
-                            <dt>Kontaktperson</dt><dd>@resource.ContactName</dd>
-                            <dt>Telefonnummer</dt><dd>@resource.PhoneNumber</dd>
-                        </dl>
+                <article class="resource-card">
+                    <div class="resource-card-heading">
+                        <div class="resource-icon" aria-hidden="true">@(resource.Type.Length > 0 ? resource.Type[..1].ToUpperInvariant() : "R")</div>
+                        <div><p class="resource-type">@resource.Type</p><h2>@resource.Name</h2></div>
+                    </div>
+                    <p class="resource-status"><span class="badge @(assigned ? "bg-primary" : resource.IsAvailable ? "bg-success" : "bg-secondary")">@(assigned ? "Tildelt" : resource.IsAvailable ? "Tilgjengelig" : "Ikke tilgjengelig")</span></p>
+                    <p class="resource-description">@resource.Description</p>
+                    <dl class="resource-contact">
+                        <div><dt>Region</dt><dd>@(string.IsNullOrWhiteSpace(resource.Region) ? "Ikke oppgitt - eier må oppdatere" : resource.Region)</dd></div>
+                        <div><dt>Tidsrom (norsk tid)</dt><dd><partial name="_ResourcePeriod" model="resource" /></dd></div>
+                        <div><dt>Kontaktperson</dt><dd>@resource.ContactName</dd></div>
+                        <div><dt>Telefonnummer</dt><dd>@resource.PhoneNumber</dd></div>
+                    </dl>
+                    <div class="resource-card-footer">
+                        <span>Lagt til @resource.CreatedAtUtc.ToString("dd.MM.yyyy")</span>
                         @if (resource.OwnerId == User.FindFirstValue(ClaimTypes.NameIdentifier) || User.IsInRole(RoleNames.Admin))
                         {
-                            @if (assigned) { <p>Frigi tildelingen før redigering eller sletting.</p> }
+                            @if (assigned) { <span>Frigi tildelingen før redigering eller sletting.</span> }
                             else
                             {
-                                <a asp-action="Edit" asp-route-id="@resource.Id" class="btn btn-outline-primary">Rediger</a>
-                                <a asp-action="Delete" asp-route-id="@resource.Id" class="btn btn-outline-danger">Slett</a>
+                                <div><a asp-action="Edit" asp-route-id="@resource.Id" class="edit-link">Rediger <span aria-hidden="true">↗</span></a><a asp-action="Delete" asp-route-id="@resource.Id" class="delete-link">Slett</a></div>
                             }
                         }
-                    </div></article>
-                </div>
+                    </div>
+                </article>
             }
-        </div>
-        <h2 class="h4 mt-4">Ressursenes plassering</h2>
-        <div id="overviewMap" class="border rounded" style="height: clamp(260px, 50vh, 480px);"></div>
-    }
-</div>
+        </section>
+        <section class="resource-map-panel" aria-labelledby="map-heading">
+            <div class="map-panel-heading"><div><p class="eyebrow">GEOGRAFISK OVERSIKT</p><h2 id="map-heading">Ressursenes plassering</h2></div><span class="map-count">@Model.Resources.Count</span></div>
+            <div id="overviewMap"></div>
+            <p class="map-caption">Velg en markør for å se ressursnavnet.</p>
+        </section>
+    </div>
+}
 @section Scripts {
     @if (Model.Resources.Count > 0)
     {
