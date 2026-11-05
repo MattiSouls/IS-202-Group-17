@@ -10,6 +10,9 @@ public class Need
 {
     public int Id { get; set; }
 
+    public long Version { get; set; }
+    public Guid? CreationToken { get; set; }
+
     [Required, MaxLength(100)]
     public string Type { get; set; } = string.Empty;
 
@@ -20,6 +23,8 @@ public class Need
     public string? Location { get; set; }
 
     public DateTime NeededAt { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 
     [Required, MaxLength(50)]
     public string Priority { get; set; } = string.Empty;

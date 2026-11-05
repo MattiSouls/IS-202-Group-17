@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using WebApplicationInAspire.DataAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebApplicationInAspire.DataAccess.Repositories;
@@ -13,12 +15,14 @@ public class ResourceController : Controller
 {
     private readonly IResourceRepository _repository;
     private readonly ILogger<ResourceController> _logger;
+    private readonly ApplicationDbContext _database;
 
     // Dependency Injection av repository og logger
-    public ResourceController(IResourceRepository repository, ILogger<ResourceController> logger)
+    public ResourceController(IResourceRepository repository, ILogger<ResourceController> logger, ApplicationDbContext database)
     {
         _repository = repository;
         _logger = logger;
+        _database = database;
     }
 
     // Hjelpemetode for å hente ID-en til innlogget bruker
@@ -63,10 +67,13 @@ public class ResourceController : Controller
             Latitude = model.Latitude ?? 0,
             Longitude = model.Longitude ?? 0,
             OwnerId = userId,
+            CreationToken = model.RequestId,
             CreatedAtUtc = DateTime.UtcNow
         };
 
+        if (userId.Length == 0) return Challenge();
         await _repository.AddAsync(resource);
+        TempData["SuccessMessage"] = "Ressursen er registrert. Du finner den i oversikten.";
         _logger.LogInformation("Ressurs {Name} opprettet av bruker {UserId}", resource.Name, userId);
 
         // Redirect etter vellykket POST som beskrevet i oppgaven
@@ -75,12 +82,9 @@ public class ResourceController : Controller
 
     /// <summary>Leverandører ser egne ressurser; offentlige brukere ser ledige tilbud med kjent tidsrom.</summary>
     [HttpGet]
-    public async Task<IActionResult> Overview(string? region)
-    {
-        return View(await BuildOverviewAsync(region));
-    }
+    public async Task<IActionResult> Overview(string? region, string? q = null, string? type = null, string? status = null, int page = 1)
+        => View(await BuildOverviewAsync(new ListFilter { Region = region, Q = q, Type = type, Status = status, Page = page }));
 
-    /// <summary>Utskrift bruker samme rolle- og regionfilter som oversikten.</summary>
     [HttpGet]
     public async Task<IActionResult> RegionalList(string? region)
     {
@@ -89,23 +93,69 @@ public class ResourceController : Controller
             TempData["ErrorMessage"] = "Velg en region før du åpner utskriftslisten.";
             return RedirectToAction(nameof(Overview));
         }
-        return View(await BuildOverviewAsync(region));
+        var isPublic = User.IsInRole(RoleNames.PublicUser) || User.IsInRole(RoleNames.Admin);
+        // Utskrift har egen grense for å unngå at et stort datasett velter nettleseren.
+        var rows = await _repository.GetForOverviewAsync(isPublic ? null : GetCurrentUserId(), isPublic && !User.IsInRole(RoleNames.Admin), region);
+        ViewData["Truncated"] = rows.Count > 500;
+        var rowIds = rows.Take(500).Select(r => r.Id).ToArray();
+        var assignedIds = (await _database.Needs.Where(n => n.AssignedResourceId != null && rowIds.Contains(n.AssignedResourceId.Value) && n.Status == NeedStatuses.Assigned).Select(n => n.AssignedResourceId!.Value).ToListAsync()).ToHashSet();
+        return View(new ResourceOverviewViewModel
+        {
+            Resources = rows.Take(500).ToList(),
+            Region = region,
+            IsPublicOverview = isPublic,
+            AssignedResourceIds = assignedIds
+        });
     }
 
-    private async Task<ResourceOverviewViewModel> BuildOverviewAsync(string? region)
+    /// <summary>Strømmer hele regionlisten uten å laste datasettet i minnet. CSV-formler nøytraliseres.</summary>
+    [HttpGet]
+    public async Task<IActionResult> ExportCsv(string region)
+    {
+        if (string.IsNullOrWhiteSpace(region) || region.Length > 200) return BadRequest();
+        var query = _database.Resources.AsNoTracking();
+        var isAdmin = User.IsInRole(RoleNames.Admin);
+        var isPublic = User.IsInRole(RoleNames.PublicUser);
+        if (!isPublic && !isAdmin) { var userId = GetCurrentUserId(); query = query.Where(r => r.OwnerId == userId); }
+        else if (!isAdmin) query = query.Where(r => r.IsAvailable && r.AvailableFrom != null && r.AvailableUntil > r.AvailableFrom && !_database.Needs.Any(n => n.AssignedResourceId == r.Id && n.Status == NeedStatuses.Assigned));
+        var normalized = WebApplicationInAspire.Services.MatchingRules.Normalize(region);
+        query = query.Where(r => r.Region.Trim().ToUpper() == normalized).OrderBy(r => r.Name).ThenBy(r => r.Id);
+        Response.ContentType = "text/csv; charset=utf-8";
+        Response.Headers.ContentDisposition = "attachment; filename=ressurser.csv";
+        Response.Headers.CacheControl = "no-store";
+        await using var writer = new StreamWriter(Response.Body, new System.Text.UTF8Encoding(true), leaveOpen: true);
+        await writer.WriteLineAsync("Navn;Kategori;Region;Fra;Til;Kontakt;Telefon");
+        await foreach (var resource in query.AsAsyncEnumerable().WithCancellation(HttpContext.RequestAborted))
+            await writer.WriteLineAsync(string.Join(";", new[] { resource.Name, resource.Type, resource.Region, resource.AvailableFrom?.ToString("yyyy-MM-dd HH:mm") ?? "", resource.AvailableUntil?.ToString("yyyy-MM-dd HH:mm") ?? "", resource.ContactName, resource.PhoneNumber }.Select(CsvCell)));
+        await writer.FlushAsync(HttpContext.RequestAborted);
+        return new EmptyResult();
+    }
+    private static string CsvCell(string value)
+    {
+        if (value.Length > 0 && ("=+-@".Contains(value.TrimStart().FirstOrDefault()) || char.IsWhiteSpace(value[0]))) value = "'" + value;
+        return "\"" + value.Replace("\"", "\"\"") + "\"";
+    }
+
+    private Task<ResourceOverviewViewModel> BuildOverviewAsync(ListFilter filter)
     {
         var isPublic = User.IsInRole(RoleNames.PublicUser) || User.IsInRole(RoleNames.Admin);
-        var ownerId = isPublic ? null : GetCurrentUserId();
-        var all = await _repository.GetForOverviewAsync(ownerId, isPublic, null);
-        return new ResourceOverviewViewModel
-        {
-            Resources = string.IsNullOrWhiteSpace(region) ? all : await _repository.GetForOverviewAsync(ownerId, isPublic, region),
-            Regions = all.Select(resource => resource.Region.Trim()).Where(value => value.Length > 0)
-                .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(value => value).ToList(),
-            Region = region?.Trim(),
-            IsPublicOverview = isPublic,
-            AssignedResourceIds = await _repository.GetAssignedIdsAsync()
-        };
+        return _repository.SearchAsync(isPublic ? null : GetCurrentUserId(), isPublic && !User.IsInRole(RoleNames.Admin), filter);
+    }
+
+    /// <summary>Leverandøren får bare behovskontakt for en ressurs vedkommende eier.</summary>
+    [HttpGet]
+    public async Task<IActionResult> Details(int id)
+    {
+        var resource = await _repository.GetByIdAsync(id);
+        if (resource is null) return NotFound();
+        var owner = resource.OwnerId == GetCurrentUserId() || User.IsInRole(RoleNames.Admin);
+        var publicUser = User.IsInRole(RoleNames.PublicUser);
+        var assigned = await _database.Needs.AnyAsync(n => n.AssignedResourceId == id && n.Status == NeedStatuses.Assigned);
+        if (!owner && (!publicUser || !resource.IsAvailable || resource.AvailableFrom == null || resource.AvailableUntil <= resource.AvailableFrom || assigned)) return Forbid();
+        var contacts = await _database.Needs.AsNoTracking().Where(n => n.AssignedResourceId == id && n.Status == NeedStatuses.Assigned).OrderBy(n => n.Id).Take(2).ToListAsync();
+        if (contacts.Count > 1) ViewData["AssignmentWarning"] = "Ressursen har motstridende eldre tildelinger. Kontakt administrator før endring. Ressursen forblir sperret.";
+        var need = contacts.FirstOrDefault();
+        return View(new AssignmentInfo(resource, owner ? need : null));
     }
 
     /// <summary>Viser eierens redigeringsskjema og sperrer felt ved aktiv tildeling.</summary>
@@ -127,6 +177,7 @@ public class ResourceController : Controller
         var model = new ResourceViewModel
         {
             Id = resource.Id,
+            Version = resource.Version,
             Name = resource.Name,
             Type = resource.Type,
             Region = resource.Region,
@@ -172,6 +223,7 @@ public class ResourceController : Controller
         }
 
         // Oppdater feltene
+        existingResource.Version = model.Version;
         existingResource.Name = model.Name;
         existingResource.Type = model.Type;
         existingResource.Region = model.Region.Trim();
@@ -193,6 +245,7 @@ public class ResourceController : Controller
         }
         _logger.LogInformation("Ressurs {Id} oppdatert", id);
 
+        TempData["SuccessMessage"] = "Endringene er lagret.";
         return RedirectToAction(nameof(Overview));
     }
 
@@ -240,6 +293,7 @@ public class ResourceController : Controller
             Response.StatusCode = StatusCodes.Status409Conflict;
             return View("Delete", resource);
         }
+        TempData["SuccessMessage"] = "Ressursen er slettet.";
         _logger.LogInformation("Ressurs {Id} slettet", id);
 
         return RedirectToAction(nameof(Overview));

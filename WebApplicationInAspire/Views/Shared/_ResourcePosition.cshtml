@@ -7,12 +7,12 @@
 </div>
 <div class="row">
     <div class="col-12 col-md-6 mb-3">
-        <label asp-for="Latitude" class="form-label">Breddegrad</label>
+        <label asp-for="Latitude" class="form-label">Breddegrad *</label>
         <input asp-for="Latitude" type="number" step="any" min="-90" max="90" class="form-control" aria-describedby="position-help" />
         <span asp-validation-for="Latitude" class="text-danger"></span>
     </div>
     <div class="col-12 col-md-6 mb-3">
-        <label asp-for="Longitude" class="form-label">Lengdegrad</label>
+        <label asp-for="Longitude" class="form-label">Lengdegrad *</label>
         <input asp-for="Longitude" type="number" step="any" min="-180" max="180" class="form-control" aria-describedby="position-help" />
         <span asp-validation-for="Longitude" class="text-danger"></span>
     </div>

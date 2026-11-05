@@ -3,12 +3,12 @@
     ViewData["Title"] = "Registrer bruker";
 }
 
-<h1 class="h3 mb-3">Registrer deg som ressursleverandør</h1>
+<section class="panel auth-panel"><h1 class="h3 mb-3">Registrer deg som ressursleverandør</h1>
 
-<div class="row">
-    <div class="col-md-6 col-lg-5">
-        <form asp-action="Register" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+<div>
+    <div>
+        <form asp-action="Register" method="post" novalidate>
+            <partial name="_FormErrors" />
 
             <div class="mb-3">
                 <label asp-for="Email" class="form-label"></label>
@@ -36,6 +36,7 @@
     </div>
 </div>
 
+</section>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }

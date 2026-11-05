@@ -15,6 +15,8 @@
     tiles.on('tileerror', () => {
         status.textContent = 'Kartbakgrunnen kunne ikke lastes. Bruk kjente koordinater under.';
     });
+    const expandable = document.getElementById('map')?.closest('details');
+    if (expandable) expandable.addEventListener('toggle', () => { if (expandable.open) map.invalidateSize(); });
     let marker;
     function showPosition() {
         const lat = Number(latitude.value);

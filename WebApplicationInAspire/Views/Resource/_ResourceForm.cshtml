@@ -1,0 +1,21 @@
+@model WebApplicationInAspire.Models.ResourceViewModel
+<form asp-action="@(Model.Id.HasValue ? "Edit" : "Register")" asp-route-id="@Model.Id" method="post" novalidate>
+    <input type="hidden" asp-for="Id" /><input type="hidden" asp-for="Version" /><input type="hidden" asp-for="RequestId" />
+    <partial name="_FormErrors" />
+    @if (ViewData["IsAssigned"] is true) { <div class="feedback warning">Ressursen er tildelt. Kontakt aktøren under tildelingsdetaljer for å avtale frigivelse før du redigerer.</div> }
+    <fieldset class="form-section" disabled="@(ViewData["IsAssigned"] is true)">
+        <legend>1. Hva kan du bidra med?</legend>
+        <div class="field-grid">
+            <div><label asp-for="Name" class="form-label">Ressursnavn *</label><input asp-for="Name" class="form-control" placeholder="For eksempel Vannpumpe 200 l/min" /><span asp-validation-for="Name"></span></div>
+            <div><label asp-for="Type" class="form-label">Ressurskategori *</label><input asp-for="Type" list="type-options" class="form-control" placeholder="Velg eller skriv en kategori" aria-describedby="type-help" /><span asp-validation-for="Type"></span><div class="form-text" id="type-help">Bruk samme kategori som behovet, for eksempel Pumpe eller Aggregat.</div></div>
+            <div class="wide"><label asp-for="Description" class="form-label">Beskrivelse <span class="muted">(valgfritt)</span></label><textarea asp-for="Description" rows="3" class="form-control" placeholder="Kapasitet, utstyr og praktiske begrensninger"></textarea><span asp-validation-for="Description"></span></div>
+        </div>
+    </fieldset>
+    <fieldset class="form-section" disabled="@(ViewData["IsAssigned"] is true)"><legend>2. Hvor og når kan den brukes?</legend><partial name="_ResourceAvailability" model="Model" /><partial name="_ResourcePosition" model="Model" /></fieldset>
+    <fieldset class="form-section" disabled="@(ViewData["IsAssigned"] is true)"><legend>3. Hvem kan kontaktes?</legend><div class="field-grid">
+        <div><label asp-for="ContactName" class="form-label">Kontaktperson *</label><input asp-for="ContactName" autocomplete="name" class="form-control" /><span asp-validation-for="ContactName"></span></div>
+        <div><label asp-for="PhoneNumber" class="form-label">Telefonnummer *</label><input asp-for="PhoneNumber" type="tel" autocomplete="tel" class="form-control" /><span asp-validation-for="PhoneNumber"></span></div>
+    </div></fieldset>
+    <div class="form-actions"><button type="submit" class="btn btn-primary" disabled="@(ViewData["IsAssigned"] is true)">@(Model.Id.HasValue ? "Lagre endringer" : "Registrer ressurs")</button><a asp-action="Overview" class="btn btn-secondary">Avbryt</a></div>
+</form>
+<partial name="_Options" />

@@ -7,6 +7,7 @@ namespace WebApplicationInAspire.DataAccess.Repositories;
 /// </summary>
 public interface IResourceRepository
 {
+    Task<WebApplicationInAspire.Models.ResourceOverviewViewModel> SearchAsync(string? ownerId, bool availableOnly, WebApplicationInAspire.Models.ListFilter filter);
     Task<IReadOnlyList<Resource>> GetForOverviewAsync(string? ownerId, bool availableOnly, string? region);
     Task<IReadOnlySet<int>> GetAssignedIdsAsync();
     Task<IReadOnlyList<Resource>> GetAllAsync(CancellationToken cancellationToken = default);

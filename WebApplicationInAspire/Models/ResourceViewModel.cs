@@ -1,10 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace WebApplicationInAspire.Models;
 
 /// <summary>Inndata for en ressurs; tidspunktene oppgis som norsk lokal tid.</summary>
 public class ResourceViewModel : IValidatableObject
 {
+    public long Version { get; set; }
+    public Guid RequestId { get; set; } = Guid.NewGuid();
+
     public int? Id { get; set; }
 
     [Required(ErrorMessage = "Navn er påkrevd")]
@@ -42,17 +45,19 @@ public class ResourceViewModel : IValidatableObject
     [StringLength(50, ErrorMessage = "Telefonnummeret kan ha maks 50 tegn")]
     public string PhoneNumber { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Lokasjon må markeres på kartet")]
+    [Required(ErrorMessage = "Velg posisjon i kartet eller oppgi begge koordinatene")]
     [Range(-90d, 90d, ErrorMessage = "Breddegrad må være mellom -90 og 90")]
     public double? Latitude { get; set; }
 
-    [Required(ErrorMessage = "Lokasjon må markeres på kartet")]
+    [Required(ErrorMessage = "Velg posisjon i kartet eller oppgi begge koordinatene")]
     [Range(-180d, 180d, ErrorMessage = "Lengdegrad må være mellom -180 og 180")]
     public double? Longitude { get; set; }
 
     /// <summary>Kontrollerer databasegrensene og at sluttidspunktet følger starttidspunktet.</summary>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (RequestId == Guid.Empty)
+            yield return new ValidationResult("Skjemaet mangler registreringsnøkkel. Åpne et nytt skjema.", [nameof(RequestId)]);
         if (AvailableFrom is { Year: < 1000 })
             yield return new ValidationResult("Velg et gyldig år fra 1000", [nameof(AvailableFrom)]);
         if (AvailableUntil is { Year: < 1000 })

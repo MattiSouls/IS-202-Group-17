@@ -31,17 +31,32 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
         await using var db = database.Context();
         var resource = new Resource
         {
-            Name = "Pumpe " + Guid.NewGuid().ToString("N"), Type = type ?? "Pumpe", Region = "Agder", OwnerId = owner,
-            ContactName = "Testperson", PhoneNumber = "+4799999999", Latitude = 58.1467, Longitude = 7.9956,
-            AvailableFrom = new DateTime(2026, 11, 1), AvailableUntil = new DateTime(2026, 11, 30)
+            Name = "Pumpe " + Guid.NewGuid().ToString("N"),
+            Type = type ?? "Pumpe",
+            Region = "Agder",
+            OwnerId = owner,
+            ContactName = "Testperson",
+            PhoneNumber = "+4799999999",
+            Latitude = 58.1467,
+            Longitude = 7.9956,
+            AvailableFrom = new DateTime(2026, 11, 1),
+            AvailableUntil = new DateTime(2026, 11, 30)
         };
         db.Resources.Add(resource); await db.SaveChangesAsync(); return resource;
     }
     private async Task<Need> AddNeed(string owner, string type = "Pumpe")
     {
         await using var db = database.Context();
-        var need = new Need { Type = type, Region = "Agder", NeededAt = new DateTime(2026, 11, 6, 12, 0, 0),
-            CreatedByUserId = owner, Priority = "High", ContactName = "Testperson", PhoneNumber = "+4799999999" };
+        var need = new Need
+        {
+            Type = type,
+            Region = "Agder",
+            NeededAt = new DateTime(2026, 11, 6, 12, 0, 0),
+            CreatedByUserId = owner,
+            Priority = "High",
+            ContactName = "Testperson",
+            PhoneNumber = "+4799999999"
+        };
         db.Needs.Add(need); await db.SaveChangesAsync(); return need;
     }
     private static void Denied(HttpResponseMessage response)
@@ -55,8 +70,13 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
     {
         using var http = new PortalHttp(database.Factory);
         var email = $"{Guid.NewGuid():N}@example.test";
-        var response = await http.PostAsync("/Account/Register", new() { ["Email"] = email,
-            ["Password"] = PortalHttp.Password, ["ConfirmPassword"] = PortalHttp.Password, ["Role"] = "Admin" }, "/Account/Register");
+        var response = await http.PostAsync("/Account/Register", new()
+        {
+            ["Email"] = email,
+            ["Password"] = PortalHttp.Password,
+            ["ConfirmPassword"] = PortalHttp.Password,
+            ["Role"] = "Admin"
+        }, "/Account/Register");
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         using var scope = database.Factory.Services.CreateScope();
         var manager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
@@ -136,16 +156,21 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
         var (_, publicUser) = await Login("PublicUser"); using var b = publicUser;
         var id = await UserId(email);
         var visible = await AddResource(id); var hidden = await AddResource(id); var legacy = await AddResource(id);
+        var prefix = "Scoped-" + Guid.NewGuid().ToString("N");
+        visible.Name = prefix + " visible"; hidden.Name = prefix + " hidden"; legacy.Name = prefix + " legacy";
         await using (var db = database.Context())
         {
+            await db.Resources.Where(r => r.Id == visible.Id).ExecuteUpdateAsync(u => u.SetProperty(r => r.Name, visible.Name).SetProperty(r => r.Region, prefix));
+            await db.Resources.Where(r => r.Id == hidden.Id).ExecuteUpdateAsync(u => u.SetProperty(r => r.Name, hidden.Name).SetProperty(r => r.Region, prefix));
+            await db.Resources.Where(r => r.Id == legacy.Id).ExecuteUpdateAsync(u => u.SetProperty(r => r.Name, legacy.Name).SetProperty(r => r.Region, prefix));
             await db.Resources.Where(row => row.Id == hidden.Id).ExecuteUpdateAsync(update => update.SetProperty(row => row.IsAvailable, false));
             await db.Resources.Where(row => row.Id == legacy.Id).ExecuteUpdateAsync(update => update.SetProperty(row => row.AvailableFrom, (DateTime?)null));
         }
-        var publicHtml = await publicUser.Client.GetStringAsync("/Resource/Overview?region=Agder");
+        var publicHtml = await publicUser.Client.GetStringAsync("/Resource/Overview?region=" + prefix);
         Assert.Contains(visible.Name, publicHtml); Assert.DoesNotContain(hidden.Name, publicHtml); Assert.DoesNotContain(legacy.Name, publicHtml);
         var ownerHtml = await owner.Client.GetStringAsync("/Resource/Overview");
         Assert.Contains(hidden.Name, ownerHtml); Assert.Contains("Tidsrom mangler", ownerHtml);
-        var print = await publicUser.Client.GetStringAsync("/Resource/RegionalList?region=Agder");
+        var print = await publicUser.Client.GetStringAsync("/Resource/RegionalList?region=" + prefix);
         Assert.Contains(visible.Name, print); Assert.DoesNotContain(hidden.Name, print); Assert.Contains("01.11.2026", print);
     }
 
@@ -154,13 +179,20 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
     {
         var email = await database.UserAsync("ResourceProvider");
         using var http = new PortalHttp(database.Factory);
-        var login = await http.PostAsync("/Account/Login", new() { ["Email"] = email, ["Password"] = PortalHttp.Password,
-            ["ReturnUrl"] = "https://example.org/" }, "/Account/Login");
+        var login = await http.PostAsync("/Account/Login", new()
+        {
+            ["Email"] = email,
+            ["Password"] = PortalHttp.Password,
+            ["ReturnUrl"] = "https://example.org/"
+        }, "/Account/Login");
         Assert.Equal("/", login.Headers.Location!.ToString());
         using var wrong = new PortalHttp(database.Factory);
         for (var i = 0; i < 5; i++)
-            Assert.Equal(HttpStatusCode.OK, (await wrong.PostAsync("/Account/Login", new() { ["Email"] = email,
-                ["Password"] = "WrongPassword123" }, "/Account/Login")).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await wrong.PostAsync("/Account/Login", new()
+            {
+                ["Email"] = email,
+                ["Password"] = "WrongPassword123"
+            }, "/Account/Login")).StatusCode);
         await using var db = database.Context();
         Assert.True((await db.Users.SingleAsync(user => user.UserName == email)).LockoutEnd > DateTimeOffset.UtcNow);
         var blocked = await wrong.PostAsync("/Account/Login", new() { ["Email"] = email, ["Password"] = PortalHttp.Password }, "/Account/Login");
@@ -171,22 +203,42 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
     [MariaDbFact]
     public async Task Need_HTTP_flow_matches_assigns_releases_and_resolves()
     {
-        var email = await database.UserAsync("ResourceProvider"); var resource = await AddResource(await UserId(email));
+        var uniqueType = "Pumpe-" + Guid.NewGuid().ToString("N");
+        var email = await database.UserAsync("ResourceProvider"); var resource = await AddResource(await UserId(email), uniqueType);
         var (publicEmail, http) = await Login("PublicUser"); using var session = http;
-        var fields = new Dictionary<string, string> { ["Type"] = "Pumpe", ["Region"] = "Agder", ["Location"] = "Kristiansand",
-            ["NeededAt"] = "2026-11-06T12:00", ["Priority"] = "High", ["ContactName"] = "Testperson", ["PhoneNumber"] = "+4799999999" };
+        var fields = new Dictionary<string, string>
+        {
+            ["Type"] = uniqueType,
+            ["Region"] = "Agder",
+            ["Location"] = "Kristiansand",
+            ["NeededAt"] = "2026-11-06T12:00",
+            ["Priority"] = "High",
+            ["ContactName"] = "Testperson",
+            ["PhoneNumber"] = "+4799999999"
+        };
         Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync("/Need/Register", fields, "/Need/Register")).StatusCode);
         await using var db = database.Context(); var owner = await UserId(publicEmail);
         var need = await db.Needs.AsNoTracking().SingleAsync(row => row.CreatedByUserId == owner);
         Assert.Contains(resource.Name, await http.Client.GetStringAsync($"/Need/Matches/{need.Id}"));
         for (var i = 0; i < 2; i++)
         {
-            Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync("/Need/Assign", new() { ["id"] = need.Id.ToString(),
-                ["resourceId"] = resource.Id.ToString() }, "/Need/Register")).StatusCode);
+            need = await db.Needs.AsNoTracking().SingleAsync(n => n.Id == need.Id);
+            resource = await db.Resources.AsNoTracking().SingleAsync(r => r.Id == resource.Id);
+            Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync("/Need/Assign", new()
+            {
+                ["needVersion"] = need.Version.ToString(),
+                ["resourceVersion"] = resource.Version.ToString(),
+                ["id"] = need.Id.ToString(),
+                ["resourceId"] = resource.Id.ToString()
+            }, "/Need/Register")).StatusCode);
             Assert.False((await db.Resources.AsNoTracking().SingleAsync(row => row.Id == resource.Id)).IsAvailable);
             var path = i == 0 ? "/Need/Release" : "/Need/UpdateStatus";
-            Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync(path, new() { ["id"] = need.Id.ToString(),
-                ["status"] = "Resolved" }, "/Need/Register")).StatusCode);
+            Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync(path, new()
+            {
+                ["id"] = need.Id.ToString(),
+                ["needVersion"] = (need.Version + 1).ToString(),
+                ["status"] = "Resolved"
+            }, "/Need/Register")).StatusCode);
             need = await db.Needs.AsNoTracking().SingleAsync(row => row.Id == need.Id);
             Assert.Equal(i == 0 ? "UnderReview" : "Resolved", need.Status); Assert.Null(need.AssignedResourceId);
             Assert.True((await db.Resources.AsNoTracking().SingleAsync(row => row.Id == resource.Id)).IsAvailable);
@@ -296,5 +348,219 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
             MySqlConnection.ClearAllPools();
             await new MySqlCommand($"DROP DATABASE `{name}`", sql).ExecuteNonQueryAsync();
         }
+    }
+
+    [MariaDbFact]
+    public async Task Replayed_resource_and_need_registration_are_idempotent_but_new_form_can_repeat_content()
+    {
+        var (email, http) = await Login(); using var session = http;
+        var fields = PortalHttp.ResourceFields("Idempotent " + Guid.NewGuid().ToString("N"));
+        fields["RequestId"] = Guid.NewGuid().ToString();
+        var responses = await Task.WhenAll(http.PostAsync("/Resource/Register", fields, "/Resource/Register"), http.PostAsync("/Resource/Register", fields, "/Resource/Register"));
+        Assert.All(responses, response => Assert.Equal(HttpStatusCode.Redirect, response.StatusCode));
+        await using var db = database.Context();
+        Assert.Equal(1, await db.Resources.CountAsync(r => r.Name == fields["Name"]));
+        fields["RequestId"] = Guid.NewGuid().ToString();
+        Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync("/Resource/Register", fields, "/Resource/Register")).StatusCode);
+        Assert.Equal(2, await db.Resources.CountAsync(r => r.Name == fields["Name"]));
+        var (publicEmail, publicHttp) = await Login("PublicUser"); using var actor = publicHttp;
+        var needFields = new Dictionary<string, string> { ["Type"] = "Pumpe", ["Region"] = "Agder", ["NeededAt"] = "2026-11-06T12:00", ["Priority"] = "High", ["ContactName"] = "Testperson", ["PhoneNumber"] = "99999999", ["RequestId"] = Guid.NewGuid().ToString() };
+        var created = await Task.WhenAll(actor.PostAsync("/Need/Register", needFields, "/Need/Register"), actor.PostAsync("/Need/Register", needFields, "/Need/Register"));
+        Assert.All(created, response => Assert.Equal(HttpStatusCode.Redirect, response.StatusCode));
+        var id = await UserId(publicEmail); Assert.Equal(1, await db.Needs.CountAsync(n => n.CreatedByUserId == id));
+    }
+
+    [MariaDbFact]
+    public async Task Stale_edit_is_rejected_without_losing_newer_data_or_entered_values()
+    {
+        var (email, http) = await Login(); using var actor = http;
+        var resource = await AddResource(await UserId(email));
+        var fields = PortalHttp.ResourceFields(resource.Name); fields["Id"] = resource.Id.ToString(); fields["Version"] = "0";
+        fields["PhoneNumber"] = "98888888";
+        Assert.Equal(HttpStatusCode.Redirect, (await http.PostAsync($"/Resource/Edit/{resource.Id}", fields, "/Resource/Register")).StatusCode);
+        fields["Name"] = "Dette skrev jeg i en gammel fane"; fields["PhoneNumber"] = "97777777";
+        var stale = await http.PostAsync($"/Resource/Edit/{resource.Id}", fields, "/Resource/Register");
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode); Assert.Contains(fields["Name"], await stale.Content.ReadAsStringAsync());
+        await using var db = database.Context(); var stored = await db.Resources.AsNoTracking().SingleAsync(r => r.Id == resource.Id);
+        Assert.Equal("98888888", stored.PhoneNumber); Assert.Equal(resource.Name, stored.Name); Assert.Equal(1, stored.Version);
+    }
+
+    [MariaDbFact]
+    public async Task Assignment_notices_commit_once_and_are_private_even_when_read_by_forged_id()
+    {
+        var (providerEmail, providerHttp) = await Login(); using var provider = providerHttp;
+        var owner = await UserId(await database.UserAsync("PublicUser"));
+        var resource = await AddResource(await UserId(providerEmail)); var first = await AddNeed(owner); var second = await AddNeed(owner);
+        await using var one = database.Context(); await using var two = database.Context();
+        var results = await Task.WhenAll(new AllocationService(one).AssignAsync(first.Id, resource.Id, owner, false), new AllocationService(two).AssignAsync(second.Id, resource.Id, owner, false));
+        Assert.Single(results, r => r == AllocationResult.Success);
+        await using var db = database.Context(); var notices = await db.Notifications.AsNoTracking().Where(n => n.ResourceId == resource.Id).ToListAsync();
+        Assert.Equal(2, notices.Count); var winner = await db.Needs.AsNoTracking().SingleAsync(n => n.AssignedResourceId == resource.Id);
+        Assert.All(notices, n => Assert.Equal(winner.Id, n.NeedId));
+        Assert.Equal(AllocationResult.Conflict, await new AllocationService(db).AssignAsync(winner.Id, resource.Id, owner, false));
+        Assert.Equal(2, await db.Notifications.CountAsync(n => n.ResourceId == resource.Id));
+        var detail = await provider.Client.GetStringAsync($"/Resource/Details/{resource.Id}"); Assert.Contains(winner.ContactName, detail); Assert.Contains(winner.PhoneNumber, System.Net.WebUtility.HtmlDecode(detail));
+        var html = await provider.Client.GetStringAsync("/Notifications"); Assert.Contains("Ressurs tildelt", html);
+        var ownNotice = notices.Single(n => n.UserId == resource.OwnerId); var otherNotice = notices.Single(n => n.UserId == owner);
+        Assert.Equal(HttpStatusCode.NotFound, (await provider.PostAsync("/Notifications/Read", new() { ["id"] = otherNotice.Id.ToString() }, "/Resource/Register")).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await provider.PostAsync("/Notifications/Read", new() { ["id"] = ownNotice.Id.ToString() }, "/Resource/Register")).StatusCode);
+        Assert.NotNull((await db.Notifications.AsNoTracking().SingleAsync(n => n.Id == ownNotice.Id)).ReadAtUtc);
+        Assert.Null((await db.Notifications.AsNoTracking().SingleAsync(n => n.Id == otherNotice.Id)).ReadAtUtc);
+        Assert.Equal(AllocationResult.Success, await new AllocationService(db).ReleaseAsync(winner.Id, owner, false, false));
+        Assert.Equal(4, await db.Notifications.CountAsync(n => n.ResourceId == resource.Id));
+    }
+
+    [MariaDbFact]
+    public async Task Matching_sorts_real_coordinates_in_SQL_and_review_does_not_leak_non_candidates()
+    {
+        var (email, http) = await Login("PublicUser"); using var actor = http; var owner = await UserId(email);
+        var provider = await UserId(await database.UserAsync("ResourceProvider")); var type = Guid.NewGuid().ToString("N");
+        var need = await AddNeed(owner, type); var far = await AddResource(provider, type); var near = await AddResource(provider, type);
+        await using var db = database.Context();
+        await db.Needs.Where(n => n.Id == need.Id).ExecuteUpdateAsync(u => u.SetProperty(n => n.Latitude, 58.1467).SetProperty(n => n.Longitude, 7.9956));
+        await db.Resources.Where(r => r.Id == far.Id).ExecuteUpdateAsync(u => u.SetProperty(r => r.Latitude, 58.5).SetProperty(r => r.Longitude, 8.5));
+        need = await db.Needs.AsNoTracking().SingleAsync(n => n.Id == need.Id);
+        var matches = await new AllocationService(db).FindMatchesAsync(need); Assert.Equal(near.Id, matches[0].Id);
+        var html = await actor.Client.GetStringAsync($"/Need/Matches/{need.Id}"); Assert.Contains("luftlinje", html);
+        var privateResource = await AddResource(provider, "not-a-match");
+        var response = await actor.Client.GetAsync($"/Need/Review/{need.Id}?resourceId={privateResource.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode); Assert.DoesNotContain(privateResource.Name, await response.Content.ReadAsStringAsync());
+        var review = await actor.Client.GetStringAsync($"/Need/Review/{need.Id}?resourceId={near.Id}"); Assert.Contains("Bekreft tildeling", review);
+        Assert.False(await db.Needs.AnyAsync(n => n.Id == need.Id && n.Status == "Assigned"));
+    }
+
+    [MariaDbFact]
+    public async Task Open_need_can_be_corrected_but_other_owner_and_stale_form_cannot_overwrite_it()
+    {
+        var (email, http) = await Login("PublicUser"); using var actor = http; var owner = await UserId(email); var need = await AddNeed(owner);
+        var fields = new Dictionary<string, string> { ["Id"] = need.Id.ToString(), ["Version"] = "0", ["Type"] = "Aggregat", ["Region"] = "Agder", ["NeededAt"] = "2026-11-06T12:00", ["Priority"] = "High", ["ContactName"] = "Testperson", ["PhoneNumber"] = "99999999" };
+        Assert.Equal(HttpStatusCode.Redirect, (await actor.PostAsync($"/Need/Edit/{need.Id}", fields, "/Need/Register")).StatusCode);
+        fields["Type"] = "Gammelt skjema"; Assert.Equal(HttpStatusCode.Conflict, (await actor.PostAsync($"/Need/Edit/{need.Id}", fields, "/Need/Register")).StatusCode);
+        var (_, stranger) = await Login("PublicUser"); using var other = stranger; Denied(await other.PostAsync($"/Need/Edit/{need.Id}", fields, "/Need/Register"));
+        await using var db = database.Context(); Assert.Equal("Aggregat", (await db.Needs.AsNoTracking().SingleAsync(n => n.Id == need.Id)).Type);
+    }
+
+    [MariaDbFact]
+    public async Task Ten_thousand_resources_and_five_thousand_needs_render_only_one_bounded_page()
+    {
+        var (email, http) = await Login(); using var provider = http; var owner = await UserId(email);
+        var publicEmail = await database.UserAsync("PublicUser"); var publicId = await UserId(publicEmail);
+        await using var db = database.Context();
+        for (var batch = 0; batch < 10; batch++)
+        {
+            db.Resources.AddRange(Enumerable.Range(batch * 1000, 1000).Select(i => new Resource { Name = $"Lasttest {i:D5}", Type = "Pumpe", Region = "Agder", OwnerId = owner, ContactName = "Test", PhoneNumber = "99999999", AvailableFrom = new DateTime(2026, 11, 1), AvailableUntil = new DateTime(2026, 11, 30), Latitude = 58, Longitude = 8 }));
+            await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+        }
+        for (var batch = 0; batch < 5; batch++)
+        {
+            db.Needs.AddRange(Enumerable.Range(batch * 1000, 1000).Select(i => new Need { Type = $"Testbehov {i:D5}", Region = "Agder", CreatedByUserId = publicId, ContactName = "Test", PhoneNumber = "99999999", Priority = "Low", NeededAt = new DateTime(2026, 11, 6) }));
+            await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+        }
+        var page = await new WebApplicationInAspire.DataAccess.Repositories.ResourceRepository(db).SearchAsync(owner, false, new WebApplicationInAspire.Models.ListFilter { Page = 2 });
+        Assert.Equal(10000, page.Total); Assert.Equal(10, page.Resources.Count); Assert.Equal("Lasttest 00010", page.Resources[0].Name);
+        var needs = await new WebApplicationInAspire.DataAccess.Repositories.NeedRepository(db).SearchAsync(new WebApplicationInAspire.Models.ListFilter { Mine = true, Page = 2 }, publicId);
+        Assert.Equal(5000, needs.Total); Assert.Equal(10, needs.Needs.Count);
+        var html = await provider.Client.GetStringAsync("/Resource/Overview?region=Agder&q=Lasttest&page=2");
+        Assert.Contains("Lasttest 00010", html); Assert.DoesNotContain("Lasttest 00020", html); Assert.Contains("q=Lasttest", html);
+        Assert.True(html.Length < 60000, $"HTML should be bounded, got {html.Length} characters");
+    }
+
+    [MariaDbFact]
+    public async Task Old_confirmation_cannot_release_a_new_assignment_or_notify_anyone()
+    {
+        var owner = await UserId(await database.UserAsync("PublicUser")); var provider = await UserId(await database.UserAsync("ResourceProvider"));
+        var need = await AddNeed(owner); var first = await AddResource(provider); var second = await AddResource(provider);
+        await using var db = database.Context(); var service = new AllocationService(db);
+        Assert.Equal(AllocationResult.Success, await service.AssignAsync(need.Id, first.Id, owner, false, 0, 0));
+        Assert.Equal(AllocationResult.Success, await service.ReleaseAsync(need.Id, owner, false, false, 1));
+        Assert.False(await new WebApplicationInAspire.DataAccess.Repositories.ResourceRepository(db).UpdateAsync(first));
+        Assert.Equal(AllocationResult.Success, await service.AssignAsync(need.Id, second.Id, owner, false, 2, 0));
+        var count = await db.Notifications.CountAsync(n => n.NeedId == need.Id);
+        Assert.Equal(AllocationResult.Conflict, await service.ReleaseAsync(need.Id, owner, false, true, 1));
+        var stored = await db.Needs.AsNoTracking().SingleAsync(n => n.Id == need.Id); Assert.Equal(second.Id, stored.AssignedResourceId); Assert.Equal("Assigned", stored.Status);
+        Assert.False((await db.Resources.AsNoTracking().SingleAsync(r => r.Id == second.Id)).IsAvailable);
+        Assert.Equal(count, await db.Notifications.CountAsync(n => n.NeedId == need.Id));
+    }
+
+    [MariaDbFact]
+    public async Task Concurrent_need_edit_invalidates_in_flight_assignment_and_rolls_everything_back()
+    {
+        var owner = await UserId(await database.UserAsync("PublicUser")); var provider = await UserId(await database.UserAsync("ResourceProvider"));
+        var need = await AddNeed(owner); var resource = await AddResource(provider);
+        var pause = new PauseBeforeResourceRead();
+        await using var assigning = new WebApplicationInAspire.DataAccess.ApplicationDbContext(new DbContextOptionsBuilder<WebApplicationInAspire.DataAccess.ApplicationDbContext>()
+            .UseMySql(database.ConnectionString, new MariaDbServerVersion(new Version(11, 4, 0))).AddInterceptors(pause).Options);
+        var task = new AllocationService(assigning).AssignAsync(need.Id, resource.Id, owner, false);
+        await pause.Reached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        try
+        {
+            await using var editing = database.Context(); need.Type = "Aggregat";
+            Assert.True(await new WebApplicationInAspire.DataAccess.Repositories.NeedRepository(editing).EditAsync(need));
+        }
+        finally { pause.Continue.TrySetResult(); }
+        Assert.Equal(AllocationResult.Conflict, await task);
+        await using var check = database.Context(); Assert.Null((await check.Needs.AsNoTracking().SingleAsync(n => n.Id == need.Id)).AssignedResourceId);
+        Assert.True((await check.Resources.AsNoTracking().SingleAsync(r => r.Id == resource.Id)).IsAvailable);
+        Assert.Equal(0, await check.Notifications.CountAsync(n => n.NeedId == need.Id));
+        Assert.Equal(0, await check.AllocationEvents.CountAsync(n => n.NeedId == need.Id));
+    }
+
+    [MariaDbFact]
+    public async Task Regional_export_streams_all_rows_scopes_owners_and_neutralizes_spreadsheet_formulas()
+    {
+        var (email, http) = await Login(); using var actor = http;
+        var owner = await UserId(email); var stranger = await UserId(await database.UserAsync("ResourceProvider"));
+        var region = "Export-" + Guid.NewGuid().ToString("N");
+        await using var db = database.Context();
+        db.Resources.AddRange(Enumerable.Range(0, 501).Select(i => new Resource { Name = $"Export {i:D4}", Type = "Pumpe", Region = region, OwnerId = owner, ContactName = "Test", PhoneNumber = "99999999", AvailableFrom = new DateTime(2026, 11, 1), AvailableUntil = new DateTime(2026, 11, 30), Latitude = 58, Longitude = 8 }));
+        db.Resources.Add(new Resource { Name = "=HYPERLINK(\"https://example.test\")", Type = "Pumpe", Region = region, OwnerId = owner, ContactName = "+formula", PhoneNumber = "99999999" });
+        db.Resources.Add(new Resource { Name = "OTHER_OWNER_SECRET", Type = "Pumpe", Region = region, OwnerId = stranger, ContactName = "Test", PhoneNumber = "99999999" });
+        await db.SaveChangesAsync();
+        var csv = await actor.Client.GetStringAsync("/Resource/ExportCsv?region=" + region);
+        Assert.Equal(503, csv.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+        Assert.Contains("Export 0500", csv); Assert.DoesNotContain("OTHER_OWNER_SECRET", csv);
+        Assert.Contains("\"'=HYPERLINK(\"\"https://example.test\"\")\"", csv); Assert.Contains("\"'+formula\"", csv);
+        var print = await actor.Client.GetStringAsync("/Resource/RegionalList?region=" + region);
+        Assert.Contains("Listen er avkortet", print); Assert.Contains("500", print);
+    }
+
+    [MariaDbFact]
+    public async Task Security_headers_local_assets_and_accessible_server_errors_are_present()
+    {
+        var (email, http) = await Login(); using var actor = http;
+        await AddResource(await UserId(email));
+        var response = await actor.Client.GetAsync("/Resource/Overview");
+        var html = await response.Content.ReadAsStringAsync();
+        var csp = response.Headers.GetValues("Content-Security-Policy").Single();
+        Assert.Contains("script-src 'self' 'nonce-", csp); Assert.Contains("frame-ancestors 'none'", csp);
+        Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Contains("no-store", response.Headers.CacheControl!.ToString());
+        Assert.Contains("/lib/leaflet/leaflet.js", html); Assert.DoesNotContain("unpkg.com", html);
+        var token = System.Text.RegularExpressions.Regex.Match(csp, "nonce-([^']+)").Groups[1].Value;
+        Assert.Contains("nonce=\"" + token + "\"", System.Net.WebUtility.HtmlDecode(html));
+        var fields = PortalHttp.ResourceFields("Feiltest"); fields["Latitude"] = "999";
+        var invalid = await actor.PostAsync("/Resource/Register", fields, "/Resource/Register");
+        var errors = await invalid.Content.ReadAsStringAsync();
+        Assert.Contains("data-focus-errors", errors); Assert.Contains("href=\"#Latitude\"", errors);
+        Assert.Contains("id=\"Latitude-error\"", errors); Assert.Contains("aria-invalid=\"true\"", errors);
+    }
+}
+
+
+/// <summary>Deterministisk kappløpstest: behovet er lest før redigeringen slippes til.</summary>
+public sealed class PauseBeforeResourceRead : Microsoft.EntityFrameworkCore.Diagnostics.DbCommandInterceptor
+{
+    public TaskCompletionSource Reached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource Continue { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int paused;
+    public override async ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<System.Data.Common.DbDataReader>> ReaderExecutingAsync(
+        System.Data.Common.DbCommand command, Microsoft.EntityFrameworkCore.Diagnostics.CommandEventData eventData,
+        Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<System.Data.Common.DbDataReader> result, CancellationToken cancellationToken = default)
+    {
+        if (command.CommandText.Contains("FROM `Resources`") && Interlocked.CompareExchange(ref paused, 1, 0) == 0)
+        {
+            Reached.TrySetResult(); await Continue.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+        }
+        return result;
     }
 }

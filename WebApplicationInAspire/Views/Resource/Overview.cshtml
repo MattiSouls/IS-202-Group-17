@@ -1,103 +1,40 @@
-@using System.Security.Claims
-@using WebApplicationInAspire.Security
-@model WebApplicationInAspire.Models.ResourceOverviewViewModel
-@{ ViewData["Title"] = Model.IsPublicOverview ? "Tilgjengelige ressurser" : "Mine ressurser"; }
-<div class="container mt-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h1 class="h2">@ViewData["Title"]</h1>
-        @if (User.IsInRole(RoleNames.ResourceProvider) || User.IsInRole(RoleNames.Admin))
-        { <a asp-action="Register" class="btn btn-primary">Registrer ny ressurs</a> }
-    </div>
-    @if (TempData["ErrorMessage"] is string error)
-    { <div class="alert alert-warning" role="alert">@error</div> }
-    <form method="get" asp-action="Overview" class="row g-2 align-items-end mb-4">
-        <div class="col-12 col-sm-6 col-lg-4">
-            <label for="region" class="form-label">Region</label>
-            <select name="region" id="region" class="form-select">
-                <option value="">Alle regioner</option>
-                @foreach (var region in Model.Regions)
-                { <option value="@region" selected="@string.Equals(region, Model.Region, StringComparison.OrdinalIgnoreCase)">@region</option> }
-            </select>
-        </div>
-        <div class="col-auto"><button type="submit" class="btn btn-primary">Filtrer</button></div>
-        @if (!string.IsNullOrWhiteSpace(Model.Region))
-        { <div class="col-auto"><a asp-action="RegionalList" asp-route-region="@Model.Region" target="_blank" class="btn btn-outline-secondary">Utskriftsvennlig liste</a></div> }
-    </form>
-    @if (Model.Resources.Count == 0)
-    { <p>Ingen ressurser å vise med dette filteret.</p> }
-    else
-    {
-        <div class="row g-3">
-            @foreach (var resource in Model.Resources)
-            {
-                var assigned = Model.AssignedResourceIds.Contains(resource.Id);
-                <div class="col-12 col-md-6 col-xl-4">
-                    <article class="card h-100"><div class="card-body">
-                        <h2 class="h4">@resource.Name</h2>
-                        <p><span class="badge @(assigned ? "bg-primary" : resource.IsAvailable ? "bg-success" : "bg-secondary")">@(assigned ? "Tildelt" : resource.IsAvailable ? "Tilgjengelig" : "Ikke tilgjengelig")</span></p>
-                        <dl>
-                            <dt>Type</dt><dd>@resource.Type</dd>
-                            <dt>Region</dt><dd>@(string.IsNullOrWhiteSpace(resource.Region) ? "Ikke oppgitt - eier må oppdatere" : resource.Region)</dd>
-                            <dt>Tidsrom (norsk tid)</dt><dd><partial name="_ResourcePeriod" model="resource" /></dd>
-                            <dt>Beskrivelse</dt><dd>@resource.Description</dd>
-                            <dt>Kontaktperson</dt><dd>@resource.ContactName</dd>
-                            <dt>Telefonnummer</dt><dd>@resource.PhoneNumber</dd>
-                        </dl>
-                        @if (resource.OwnerId == User.FindFirstValue(ClaimTypes.NameIdentifier) || User.IsInRole(RoleNames.Admin))
-                        {
-                            @if (assigned) { <p>Frigi tildelingen før redigering eller sletting.</p> }
-                            else
-                            {
-                                <a asp-action="Edit" asp-route-id="@resource.Id" class="btn btn-outline-primary">Rediger</a>
-                                <a asp-action="Delete" asp-route-id="@resource.Id" class="btn btn-outline-danger">Slett</a>
-                            }
-                        }
-                    </div></article>
-                </div>
-            }
-        </div>
-        <h2 class="h4 mt-4">Ressursenes plassering</h2>
-        <div id="overviewMap" class="border rounded" style="height: clamp(260px, 50vh, 480px);"></div>
-    }
-</div>
-@section Scripts {
-    @if (Model.Resources.Count > 0)
-    {
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <script>
-            // Vis ressursnavn som tekst slik at brukerinnhold ikke tolkes som HTML.
-            const resources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Resources.Select(resource => new
-            {
-                name = resource.Name,
-                latitude = resource.Latitude,
-                longitude = resource.Longitude
-            })));
-            const map = L.map('overviewMap').setView([58.1467, 7.9956], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap-bidragsytere'
-            }).addTo(map);
-
-            const positions = [];
-            for (const resource of resources) {
-                // Eldre data kan være lagret før koordinatvalideringen ble lagt til.
-                if (!Number.isFinite(resource.latitude) || !Number.isFinite(resource.longitude)
-                    || Math.abs(resource.latitude) > 90 || Math.abs(resource.longitude) > 180) {
-                    continue;
-                }
-
-                const position = [resource.latitude, resource.longitude];
-                const popup = document.createElement('span');
-                popup.textContent = resource.name;
-                L.marker(position).addTo(map).bindPopup(popup);
-                positions.push(position);
-            }
-
-            if (positions.length === 1) {
-                map.setView(positions[0], 13);
-            } else if (positions.length > 1) {
-                map.fitBounds(positions, { padding: [30, 30], maxZoom: 13 });
-            }
-        </script>
-    }
+@using WebApplicationInAspire.Services
+@using WebApplicationInAspire.Models
+@model ResourceOverviewViewModel
+@{ ViewData["Title"] = User.IsInRole("Admin") ? "Alle ressurser" : Model.IsPublicOverview ? "Finn ressurser" : "Mine ressurser"; var filter = Model.Filter;
+var routes = new Dictionary<string,string> { ["q"] = filter.Q ?? "", ["region"] = filter.Region ?? "", ["type"] = filter.Type ?? "", ["status"] = filter.Status ?? "" }; }
+<header class="page-heading"><div><p class="eyebrow">RESSURSOVERSIKT</p><h1>@ViewData["Title"]</h1><p>@(Model.IsPublicOverview ? "Søk etter tilbud. Match med et behov for å kontrollere kategori, region og tidspunkt." : "Hold tilbudene oppdatert. Du får et varsel når en ressurs blir tildelt eller frigitt.")</p></div>
+@if (User.IsInRole("ResourceProvider") || User.IsInRole("Admin")) { <div class="actions"><a asp-action="Register" class="btn btn-primary">＋ Registrer ressurs</a></div> }</header>
+<form method="get" asp-action="Overview" class="panel filter-panel"><div class="filter-grid">
+<div><label for="q">Søk i navn, kategori eller region</label><input id="q" name="q" value="@filter.Q" type="search" maxlength="100" class="form-control" placeholder="For eksempel pumpe" /></div>
+<div><label for="region">Region</label><select id="region" name="region" class="form-select"><option value="">Alle regioner</option>@foreach (var region in Model.Regions) { <option value="@region" selected="@(region.Equals(filter.Region, StringComparison.OrdinalIgnoreCase))">@region</option> }</select></div>
+<div><label for="type">Kategori</label><select id="type" name="type" class="form-select"><option value="">Alle kategorier</option>@foreach (var type in Model.Types) { <option value="@type" selected="@(type.Equals(filter.Type, StringComparison.OrdinalIgnoreCase))">@type</option> }</select></div>
+@if (!Model.IsPublicOverview) { <div><label for="status">Status</label><select id="status" name="status" class="form-select"><option value="">Alle statuser</option><option value="offered" selected="@(filter.Status == "offered")">Tilbudt av eier</option><option value="assigned" selected="@(filter.Status == "assigned")">Tildelt</option><option value="paused" selected="@(filter.Status == "paused")">Pauset av eier</option></select></div> }
+<div class="actions"><button type="submit" class="btn btn-primary">Søk</button><a asp-action="Overview" class="btn btn-secondary">Nullstill</a></div></div></form>
+<div class="list-meta"><span><strong>@Model.Total</strong> @(Model.Total == 1 ? "ressurs" : "ressurser") funnet · maks 10 per side</span>@if (!string.IsNullOrWhiteSpace(filter.Region)) { <span class="actions"><a asp-action="ExportCsv" asp-route-region="@filter.Region">Last ned hele regionen (CSV)</a><a asp-action="RegionalList" asp-route-region="@filter.Region" target="_blank" rel="noopener">Skriv ut regionliste ↗</a></span> }</div>
+@if (Model.Resources.Count == 0) { <div class="panel empty-state"><h2>Ingen ressurser passer filtrene</h2><p>Prøv en annen kategori eller region. Nye tilbud vises når leverandøren har registrert tidsrom og tilgjengelighet.</p><a asp-action="Overview" class="btn btn-secondary">Vis alle</a></div> }
+else
+{
+<div class="panel table-panel"><table class="resource-table"><caption class="visually-hidden">Ressurser med region, tidsrom og status</caption><thead><tr><th class="name-cell" scope="col">Ressurs</th><th scope="col">Region</th><th scope="col">Tidsrom (norsk tid)</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Handling</span></th></tr></thead><tbody>
+@foreach (var resource in Model.Resources) { var assigned = Model.AssignedResourceIds.Contains(resource.Id); var label = PortalDisplay.Availability(resource, assigned);
+<tr><td class="name-cell"><h2><a asp-action="Details" asp-route-returnUrl="@($"{Context.Request.Path}{Context.Request.QueryString}")" asp-route-id="@resource.Id">@resource.Name</a></h2><small>@resource.Type</small></td><td data-label="Region">@(string.IsNullOrWhiteSpace(resource.Region) ? "Mangler region" : resource.Region)</td><td data-label="Tidsrom"><partial name="_ResourcePeriod" model="resource" /></td><td data-label="Status"><span class="status-pill @(assigned ? "blue" : label == "Tilgjengelig nå" ? "green" : label == "Tilgjengelig senere" ? "amber" : "")">@label</span></td><td><a asp-action="Details" asp-route-returnUrl="@($"{Context.Request.Path}{Context.Request.QueryString}")" asp-route-id="@resource.Id" class="btn btn-secondary btn-sm" aria-label="Se detaljer om @resource.Name">Se detaljer →</a></td></tr>
+}</tbody></table></div>
+<partial name="_Paging" model="@(new Paging(filter.Page, Model.Total, "Resource", "Overview", routes))" />
+<details class="panel map-panel" data-map-toggle><summary>Vis kart for de @Model.Resources.Count ressursene på denne siden</summary><div id="overviewMap" class="map-box" aria-label="Ressursenes plassering"></div><p id="overview-map-status" class="map-caption" role="status">Listen over inneholder de samme ressursene og fungerer også uten kart.</p></details>
 }
+@section Scripts {
+@if (Model.Resources.Count > 0) {
+<link rel="stylesheet" href="~/lib/leaflet/leaflet.css" /><script src="~/lib/leaflet/leaflet.js"></script>
+<script nonce="@Context.Items["CspNonce"]">
+(() => {
+ const status = document.getElementById('overview-map-status');
+ if (typeof L === 'undefined') { status.textContent = 'Kartet kunne ikke lastes. Bruk ressurslisten over.'; return; }
+ const resources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Resources.Select(r => new { name = r.Name, latitude = r.Latitude, longitude = r.Longitude })));
+ const map = L.map('overviewMap').setView([58.1467,7.9956],13);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap-bidragsytere'}).addTo(map).on('tileerror', () => { status.textContent = 'Kartbakgrunnen er utilgjengelig. Ressurslisten og detaljsidene fungerer fortsatt.'; });
+ const points = [];
+ for (const r of resources) { if (!Number.isFinite(r.latitude)||!Number.isFinite(r.longitude)||Math.abs(r.latitude)>90||Math.abs(r.longitude)>180) continue; const point=[r.latitude,r.longitude]; const text=document.createElement('span');text.textContent=r.name;L.marker(point).addTo(map).bindPopup(text);points.push(point); }
+ document.querySelector('[data-map-toggle]').addEventListener('toggle', event => { if (event.target.open) { map.invalidateSize(); if(points.length)map.fitBounds(points,{maxZoom:13,padding:[25,25]}); } });
+})();
+</script>
+} }

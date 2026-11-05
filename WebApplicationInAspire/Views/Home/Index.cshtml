@@ -1,17 +1,14 @@
-@using WebApplicationInAspire.Security
-@{ ViewData["Title"] = "Forside"; }
-<section class="py-4">
-    <h1>Ressurser og behov på ett sted</h1>
-    <p class="lead">Ressursportalen kobler offentlige behov med ressurser fra leverandører.</p>
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <a asp-controller="Resource" asp-action="Overview" class="btn btn-primary mb-2">Se ressurser</a>
-        @if (User.IsInRole(RoleNames.PublicUser) || User.IsInRole(RoleNames.Admin))
-        { <a asp-controller="Need" asp-action="Overview" class="btn btn-outline-primary mb-2">Se behov og matching</a> }
-    }
-    else
-    {
-        <a asp-controller="Account" asp-action="Login" class="btn btn-primary">Logg inn</a>
-        <a asp-controller="Account" asp-action="Register" class="btn btn-outline-primary">Registrer deg som ressursleverandør</a>
-    }
-</section>
+@using WebApplicationInAspire.Services
+@model WebApplicationInAspire.Models.DashboardViewModel
+@{ViewData["Title"]="Oversikt";}
+@if(Model is null){<section class="landing"><p class="eyebrow">SAMHANDLING I BEREDSKAP</p><h1>Riktig ressurs.<br/>På riktig sted.</h1><p>Samle tilbud, registrer behov og følg tildelingene i én oversiktlig arbeidsflate.</p><div class="actions"><a asp-controller="Account" asp-action="Login" class="btn btn-primary">Logg inn →</a><a asp-controller="Account" asp-action="Register" class="btn btn-secondary">Registrer ressursleverandør</a></div><div class="landing-grid"><article class="panel"><p class="eyebrow">01 / TILBUD</p><h2>Registrer det du kan bidra med</h2><p>Oppgi kategori, tidsrom, kontakt og posisjon. Hold tilbudet oppdatert.</p></article><article class="panel"><p class="eyebrow">02 / BEHOV</p><h2>Finn ressurser som passer</h2><p>Offentlige aktører matcher på kategori, region og tidspunkt.</p></article><article class="panel"><p class="eyebrow">03 / OPPFØLGING</p><h2>Vit hva som er tildelt</h2><p>Se tildelinger og varsler, og avtal praktisk bruk direkte.</p></article></div><p class="form-text mt-4">Offentlige brukerkontoer opprettes av portalens administrator. Registrering her gir leverandørtilgang.</p></section>}
+else{
+<header class="page-heading home-heading"><div><p class="eyebrow">@(Model.IsPublic?"OFFENTLIG AKTØR":"RESSURSLEVERANDØR")</p><h1>Ressurser og behov på ett sted</h1><p>@(Model.IsPublic?"Følg behovene og finn tilbud som kan dekke dem.":"Hold tilbudene oppdatert og følg med når noen trenger ressursene dine.")</p></div><div class="actions">@if(Model.IsPublic){<a asp-controller="Need" asp-action="Register" class="btn btn-primary">＋ Registrer behov</a>}else{<a asp-controller="Resource" asp-action="Register" class="btn btn-primary">＋ Registrer ressurs</a>}</div></header>
+<div class="stat-grid"><a class="stat-card" asp-controller="Resource" asp-action="Overview"><span>@(Model.IsPublic?"Ressurser i portalen":"Mine ressurser")</span><strong>@Model.Resources</strong><small>Åpne oversikten →</small></a>
+@if(Model.IsPublic){<a class="stat-card" asp-controller="Need" asp-action="Overview"><span>Åpne behov</span><strong>@Model.OpenNeeds</strong><small>Følg opp behov →</small></a>}else{<a class="stat-card" asp-controller="Resource" asp-action="Overview" asp-route-status="offered"><span>Administrer tilbud</span><strong>→</strong><small>Oppdater tidsrom og status</small></a>}
+<a class="stat-card" asp-controller="@(Model.IsPublic?"Need":"Resource")" asp-action="Overview" asp-route-status="@(Model.IsPublic?"Assigned":"assigned")"><span>Aktive tildelinger</span><strong>@Model.Assigned</strong><small>Se tildelinger →</small></a><a class="stat-card" asp-controller="Notifications" asp-action="Index"><span>Uleste varsler</span><strong>@Model.Unread</strong><small>Åpne varslene →</small></a></div>
+<div class="content-grid"><section class="panel"><div class="panel-heading"><h2>@(Model.IsPublic?"Behov som trenger oppfølging":"Ditt neste steg")</h2>@if(Model.IsPublic){<a asp-controller="Need" asp-action="Overview">Vis alle</a>}</div>
+@if(Model.IsPublic){@if(Model.Upcoming.Count==0){<div class="empty-state"><h2>Ingen åpne behov</h2><p>Registrer et behov når dere trenger en ressurs.</p></div>}else{<div class="task-list">@foreach(var need in Model.Upcoming){<article class="task-item"><div><h3>@need.Type <span class="status-pill">@PortalDisplay.Status(need.Status)</span></h3><p>@need.Region · @need.NeededAt.ToString("dd.MM.yyyy HH:mm") · @PortalDisplay.Priority(need.Priority) prioritet</p></div><a asp-controller="Need" asp-action="Details" asp-route-id="@need.Id" class="btn btn-secondary btn-sm">Åpne behov →</a></article>}</div>}}
+else{<div class="quick-start"><h2>Er tilgjengeligheten fortsatt riktig?</h2><p>Kontroller tidsrom og kontaktinformasjon. Når en ressurs tildeles, får du et varsel med hvem du skal kontakte.</p><a asp-controller="Resource" asp-action="Overview" class="btn btn-primary">Se mine ressurser</a></div><p class="muted">Offentlige aktører finner tilbudene dine gjennom matching. Ressursen må ha riktig kategori, region og tidsrom.</p>}
+</section><aside class="panel"><div class="panel-heading"><h2>Siste varsler</h2><a asp-controller="Notifications" asp-action="Index">Vis alle</a></div>@if(Model.Recent.Count==0){<p class="muted">Ingen varsler ennå. Tildelinger og frigivelser vises her.</p>}else{@foreach(var notice in Model.Recent){<article class="notice-item"><h3>@notice.Title</h3><p>@notice.Message</p></article>}}</aside></div>
+}

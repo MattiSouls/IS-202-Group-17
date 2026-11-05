@@ -14,17 +14,19 @@
 </head>
 <body>
     <h1>Ressursliste - @Model.Region</h1>
-    <p>@(Model.IsPublicOverview ? "Tilgjengelige ressurser i regionen" : "Dine ressurser i regionen")</p>
-    <button type="button" class="no-print" onclick="window.print()">Skriv ut</button>
+    <p>@(User.IsInRole("Admin") ? "Alle ressurser i regionen" : Model.IsPublicOverview ? "Tilbudte ressurser i regionen" : "Dine ressurser i regionen")</p>
+    <button type="button" class="no-print" id="print-list">Skriv ut</button>
+    @if(ViewData["Truncated"] is true){<p role="alert"><strong>Listen er avkortet: bare de første 500 ressursene vises. Det finnes flere treff i regionen. Denne utskriften er ikke en fullstendig regionoversikt.</strong></p>}
     <table><caption>@Model.Resources.Count @(Model.Resources.Count == 1 ? "ressurs" : "ressurser")</caption>
         <thead><tr><th>Navn</th><th>Type</th><th>Region</th><th>Tidsrom (norsk tid)</th><th>Kontaktperson</th><th>Telefon</th><th>Status</th></tr></thead>
         <tbody>
         @foreach (var resource in Model.Resources)
         {
             <tr><td>@resource.Name</td><td>@resource.Type</td><td>@resource.Region</td><td><partial name="_ResourcePeriod" model="resource" /></td><td>@resource.ContactName</td><td>@resource.PhoneNumber</td>
-                <td>@(Model.AssignedResourceIds.Contains(resource.Id) ? "Tildelt" : resource.IsAvailable ? "Tilgjengelig" : "Ikke tilgjengelig")</td></tr>
+                <td>@WebApplicationInAspire.Services.PortalDisplay.Availability(resource, Model.AssignedResourceIds.Contains(resource.Id))</td></tr>
         }
         </tbody>
     </table>
+<script src="~/js/print-list.js" asp-append-version="true"></script>
 </body>
 </html>

@@ -58,13 +58,13 @@ Lokale standardadresser fra launchSettings er http://localhost:5011 og https://l
 
 Alle ressurs-/behovsruter krever innlogging. Brukertilknytning settes på serveren. En annen offentlig bruker kan se et behov og mulige treff, men bare oppretter/admin kan tildele, frigi eller endre statusen.
 
-Registrer ressurs med navn, type, region, tidsrom, tilgjengelighet, kontaktinformasjon og posisjon. Posisjon kan velges i Leaflet eller fylles inn som kjente bredde-/lengdegrader. Ved CDN-/kartfeil vises en melding om koordinatfeltene; ingen posisjon gjettes. Koordinater kontrolleres på serveren også uten JavaScript. Ressursoversikten fungerer som liste selv om kartet ikke lastes.
+Registrer ressurs med navn, type, region, tidsrom, tilgjengelighet, kontaktinformasjon og posisjon. Posisjon kan velges i Leaflet eller fylles inn som kjente bredde-/lengdegrader. Ved kartfeil vises en melding om koordinatfeltene; ingen posisjon gjettes. Koordinater kontrolleres på serveren også uten JavaScript. Ressursoversikten fungerer som liste selv om kartet ikke lastes.
 
-Tidspunkter for både behov og ressurs oppgis som **norsk lokal tid**. Fra/til må være utfylt, og slutt må være etter start. Dette er en lokal demomodell; valg av tidssone og håndtering av tvetydige klokkeslett ved sommertid er ikke implementert. `CreatedAtUtc` er bare teknisk opprettelsestid.
+Tidspunkter for både behov og ressurs oppgis som **norsk lokal tid**. Fra/til må være utfylt, og slutt må være etter start. Valg av tidssone og entydig håndtering av tvetydige klokkeslett ved sommertid er ikke implementert; se driftsavgrensningene i DRIFT.md. `CreatedAtUtc` er bare teknisk opprettelsestid.
 
 ### Matching og status
 
-Treff krever samme type og region (store/små bokstaver og ytre mellomrom ignoreres), `IsAvailable=true`, ingen aktiv tildeling, og at `NeededAt` ligger innenfor ressursens tidsrom, inkludert endepunktene. Matching er ikke avstandsbasert. Tildeling kontrollerer vilkårene på nytt på serveren; en gammel treffliste gir ikke rett til å ta en ressurs som ikke lenger er ledig.
+Treff krever samme type og region (store/små bokstaver og ytre mellomrom ignoreres), `IsAvailable=true`, ingen aktiv tildeling, og at `NeededAt` ligger innenfor ressursens tidsrom, inkludert endepunktene. Når behovet har koordinater, sorteres treffene etter luftlinje i databasen før siden hentes. Uten behovskoordinater brukes navn/id; avstand er ikke reisetid. Tildeling kontrollerer vilkårene på nytt på serveren; en gammel treffliste gir ikke rett til å ta en ressurs som ikke lenger er ledig.
 
 - Ny (`New`) eller Vurderes (`UnderReview`) kan tildeles en passende ressurs.
 - Tildeling setter behovet til Tildelt (`Assigned`) og ressursen utilgjengelig i én MariaDB-transaksjon.
@@ -72,7 +72,15 @@ Treff krever samme type og region (store/små bokstaver og ytre mellomrom ignore
 - Løs et tildelt behov setter status Løst (`Resolved`) og frigir ressursen samlet.
 - En tildelt ressurs kan ikke redigeres eller slettes før den er frigitt. Ved samtidighetskonflikt vises HTTP 409 og brukeren må oppdatere oversikten.
 
-Ressursoversikten kan filtreres på region. Velg en region før du åpner den utskriftsvennlige listen. Den følger samme rolletilgang som oversikten. Tilgjengelighet er eierens opplysning og bekrefter ikke at ressursen faktisk finnes på stedet; kontakt eieren ved bruk.
+Ressurser og behov vises med søk, filtre og 10 rader per side. Oversikten skiller mellom tilgjengelig nå, senere, utløpt tidsrom, pauset og tildelt. Velg en region før utskrift eller CSV-eksport. Utskriften advarer når den avkortes til 500 rader; CSV strømmer hele regionlisten og nøytraliserer regnearkformler. Den følger samme rolletilgang som oversikten. Tilgjengelighet er eierens opplysning og bekrefter ikke at ressursen faktisk finnes på stedet; kontakt eieren ved bruk.
+
+### Arbeidsflate, varsler og feilvern
+
+Tildeling/frigivelse gir varig varsel til ressurseieren og behovets oppretter, og en historikkhendelse i samme transaksjon. Varslene finnes under **Varsler** og på oversikten; ingen SMS eller e-post sendes. Ulest-telleren oppdateres hvert 20. sekund når fanen er synlig. Leverandøren ser kontakt for den aktive tildelingen på ressursens detaljside.
+
+Bekreftelsessider viser konsekvensen før tildeling/frigivelse. Versjonskontroll avviser gamle skjemaer og bekreftelser, også når et behov endres samtidig med tildeling. Registreringsnøkler hindrer at samme skjema lagres dobbelt. Konflikter gir en forklaring og vei tilbake; inntastede redigeringsverdier beholdes. Åpne behov kan redigeres og settes til vurdering/løst uten tildeling.
+
+Felles kategoriforslag, synlige statusord, tastaturfokus, lenkede feilmeldinger og mobilmeny støtter navigasjonen. Leaflet leveres lokalt; bare kartflisene hentes eksternt. Se [UX-VERIFISERING.md](UX-VERIFISERING.md) for designbegrunnelser og funksjonens konkrete avgrensninger, og [DRIFT.md](DRIFT.md) før bruk utenfor det lokale miljøet.
 
 ## Arkitektur og kode
 
@@ -82,7 +90,7 @@ Ressursoversikten kan filtreres på region. Velg en region før du åpner den ut
 Nettleser (skjema, kart og koordinater)
   -> MVC-controller (GET/POST, validering, rolle/eierskap)
   -> Repository / AllocationService
-  -> ApplicationDbContext (Identity + Resources + Needs)
+  -> ApplicationDbContext (Identity + Resources + Needs + Notifications + AllocationEvents)
   -> MariaDB i Docker
   -> redirect til ny GET / Razor-visning
 ```
@@ -108,13 +116,13 @@ Tildeling låser/oppdaterer ressursen før behovet. Bare én forespørsel kan ta
 | Autentisering, autorisasjon og ressurs-CRUD | Account/ResourceController, rollenavn og repositories | Roles_ownership_CSRF, Login_rejects_external_return_url, Resource_CRUD |
 | Offentlige behov, status, matching og regional liste | NeedController, AllocationService, RegionalList | Need_HTTP_flow, Matching_honors_period, samtidighetstestene og Public_and_regional_overview |
 | Ressursens tidspunkt/frister | AvailableFrom/AvailableUntil i modell/skjema/database/matching | ValidationTests, Invalid_period og Matching_honors_period |
-| Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Nettleserkontroll ved 390 px; reell person-/mobiltest gjenstår |
-| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 45 .NET + 4 JavaScript bestått lokalt; personstudien er ikke utført her |
+| Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Nettleserkontroll av smal mobilvisning; reell person-/mobiltest gjenstår |
+| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 55 .NET + 4 JavaScript bestått lokalt; personstudien er ikke utført her |
 | Drift, arkitektur, kode- og KI-dokumentasjon | Denne README-en og kommentarer ved sentral kode | Sammenhold kjøreinstruksjoner, testnavn og faktisk kildekode; gruppa kontrollerer egen KI-beskrivelse |
 
 ### Sikkerhet
 
-Identity hasher passord, krever minst åtte tegn med stor/liten bokstav og tall, og låser konto i fem minutter etter fem feil. Cookies er HttpOnly. POST-handlinger har antiforgery, og rolle-/eierskapskontroll utføres på serveren. Registreringsfelt kan ikke gi adminrolle eller endre ressursens eier. Brukerinnhold vises kodet, også i kartpopup. Database-/kontopassord ligger i lokal konfigurasjon, ikke i repoet. Web kjører som ikke-root-bruker i containeren.
+Identity hasher passord, krever minst åtte tegn med stor/liten bokstav og tall, og låser konto i fem minutter etter fem feil. Cookies er HttpOnly/SameSite=Lax og Secure i Production. Innlogging/registrering har i tillegg en grense på 60 POST-kall per minutt per IP. CSP med nonce begrenser scripts, og autentiserte HTML-/JSON-svar sendes med no-store. POST-handlinger har antiforgery, og rolle-/eierskapskontroll utføres på serveren. Registreringsfelt kan ikke gi adminrolle eller endre ressursens eier. Brukerinnhold vises kodet, også i kartpopup. Database-/kontopassord ligger i lokal konfigurasjon, ikke i repoet. Web kjører som ikke-root-bruker i containeren.
 
 Tofaktor er utelatt etter foreleserens avklaring, formidlet av gruppa 5. november 2026. Vanlig innlogging og autorisasjon er fortsatt implementert. Compose er et lokalt Development-oppsett bundet til localhost med HTTP, ikke en ferdig produksjonsdeploy. Produksjon krever blant annet HTTPS/reversproxy, sikker hemmelighetshåndtering og separat drift/backup.
 
@@ -143,7 +151,7 @@ docker compose -p is202-tests -f compose.tests.yaml down
 
 På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECTION_STRING="Server=127.0.0.1;Port=43325;User ID=root;Password=$TEST_DB_PASSWORD;Database=is202_test;"`. Når variabelen ikke er satt, rapporteres integrasjonstestene som **Skipped**, ikke Bestått. CI setter variabelen og kjører alle testene mot en MariaDB-service. Build og test bruker samme Release-konfigurasjon. Testresultater lagres som TRX-artifact i GitHub Actions; Docker-imaget bygges også.
 
-**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **45/45 .NET-tester og 4/4 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
+**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **55/55 .NET-tester og 4/4 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
 
 | Testområde / testnavn | Steg og forventning | Faktisk lokalt resultat |
 |---|---|---|
@@ -160,7 +168,9 @@ På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECT
 | `Data_survives_new_application_host...`, `Upgrade_from_previous_release...` | Start ny appinstans og oppgrader tidligere migrasjon med eldre ressurs; bevar data og la ukjente datoer være null. | Bestått |
 | `resource-position.test.cjs` (4) | Manglende Leaflet, kartflisfeil, manuelle koordinater og klikk i sperret skjema. | Bestått |
 
-Nettleserkontroll samme dato: registrering med manuelle koordinater og tidsrom, omvendt tidsrom med tydelig feil, redigering og visning i oversikt. Ved bredde 390 px fungerte mobilmenyen og skjemaet hadde ingen horisontal overflow. Dette var automatisert nettleserkontroll, ikke en brukervennlighetstest med en uavhengig person. Tidligere 62 engangskontroller av matching/sikkerhet ble kjørt før denne endringen; de skal ikke forveksles med de 45 gjentakbare testene i repoet.
+Nye integrasjonstester dekker også doble registreringskall, utdaterte skjemaer, private varsler, SQL-sortert avstand, behovsredigering, 10 000 ressurser/5 000 behov, gammel tildelingsbekreftelse, redigering samtidig med tildeling, komplett CSV-eksport/eierskap/formelvern og sikkerhetsheadere/tilgjengelige serverfeil. Datamengdetesten dokumenterer avgrenset sidestørrelse, ikke et løfte om et bestemt antall samtidige brukere.
+
+Nettleserkontroll 5. november 2026 med syntetiske data: matching, bekreftelse og tildeling, status/historikk, leverandørens varsel og kontaktvisning, markering som lest, søk og kart, tomt registreringsskjema med lenkede feil og smal mobilvisning. Automatisert kontroll er ikke en personstudie eller full tilgjengelighetsrevisjon.
 
 ### Brukervennlighetstest - må utføres av gruppa
 

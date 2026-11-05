@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using WebApplicationInAspire.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using WebApplicationInAspire.Controllers;
@@ -14,12 +16,16 @@ public class ResourceControllerTests
     private readonly IResourceRepository repository = Substitute.For<IResourceRepository>();
     private ResourceController Controller(string owner = "owner", string role = "ResourceProvider")
     {
-        var controller = new ResourceController(repository, NullLogger<ResourceController>.Instance);
-        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext
+        var controller = new ResourceController(repository, NullLogger<ResourceController>.Instance, null!);
+        controller.ControllerContext = new ControllerContext
         {
-            User = new ClaimsPrincipal(new ClaimsIdentity([
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity([
                 new Claim(ClaimTypes.NameIdentifier, owner), new Claim(ClaimTypes.Role, role)], "test"))
-        }};
+            }
+        };
+        controller.TempData = new TempDataDictionary(controller.HttpContext, Substitute.For<ITempDataProvider>());
         return controller;
     }
 
@@ -62,14 +68,14 @@ public class ResourceControllerTests
 
     [Theory]
     [InlineData("ResourceProvider", "owner", false)]
-    [InlineData("PublicUser", null, true)] [InlineData("Admin", null, true)]
+    [InlineData("PublicUser", null, true)]
+    [InlineData("Admin", null, false)]
     public async Task Overview_passes_role_scope_to_repository(string role, string? owner, bool availableOnly)
     {
-        repository.GetForOverviewAsync(Arg.Any<string?>(), Arg.Any<bool>(), Arg.Any<string?>())
-            .Returns(Array.Empty<Resource>());
+        repository.SearchAsync(Arg.Any<string?>(), Arg.Any<bool>(), Arg.Any<ListFilter>()).Returns(new ResourceOverviewViewModel());
         repository.GetAssignedIdsAsync().Returns(new HashSet<int>());
         await Controller(role: role).Overview("Agder");
-        await repository.Received(1).GetForOverviewAsync(owner, availableOnly, "Agder");
+        await repository.Received(1).SearchAsync(owner, availableOnly, Arg.Is<ListFilter>(f => f.Region == "Agder"));
     }
 
     [Fact]
