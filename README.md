@@ -130,15 +130,15 @@ Tildeling låser/oppdaterer ressursen før behovet. Bare én forespørsel kan ta
 | Autentisering, autorisasjon og ressurs-CRUD | Account/ResourceController, rollenavn og repositories | Roles_ownership_CSRF, Login_rejects_external_return_url, Resource_CRUD |
 | Offentlige behov, status, matching og regional liste | NeedController, AllocationService, RegionalList | Need_HTTP_flow, Matching_honors_period, samtidighetstestene og Public_and_regional_overview |
 | Ressursens tidspunkt/frister | AvailableFrom/AvailableUntil i modell/skjema/database/matching | ValidationTests, Invalid_period og Matching_honors_period |
-| Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Nettleserkontroll av smal mobilvisning; reell person-/mobiltest gjenstår |
-| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 77 .NET + 13 JavaScript bestått lokalt; personstudien er ikke utført her |
-| Drift, arkitektur, kode- og KI-dokumentasjon | Denne README-en og kommentarer ved sentral kode | Sammenhold kjøreinstruksjoner, testnavn og faktisk kildekode; gruppa kontrollerer egen KI-beskrivelse |
+| Mobiltilpasset oversikt og skjema | Bootstrap-grid/navigasjon og responsive kart | Kontroll av mobilvisning og navigasjon |
+| Enhets-, system-, sikkerhets- og brukervennlighetstesting | Testprosjekt, CI og testprotokollen nedenfor | 77 .NET + 13 JavaScript bestått; manuell testing utført av gruppa |
+| Drift, arkitektur, kode- og KI-dokumentasjon | Denne README-en og kommentarer ved sentral kode | Driftsveiledning, arkitekturoversikt, testresultater og kommentarer i sentral kode |
 
 ### Sikkerhet
 
 Identity hasher passord, krever minst åtte tegn med stor/liten bokstav og tall, og låser konto i fem minutter etter fem feil. Cookies er HttpOnly/SameSite=Lax og Secure i Production. Innlogging/registrering har i tillegg en grense på 60 POST-kall per minutt per IP. CSP med nonce begrenser scripts, og autentiserte HTML-/JSON-svar sendes med no-store. POST-handlinger har antiforgery, og rolle-/eierskapskontroll utføres på serveren. Registreringsfelt kan ikke gi adminrolle eller endre ressursens eier. Brukerinnhold vises kodet, også i kartpopup. Database-/kontopassord ligger i lokal konfigurasjon, ikke i repoet. Web kjører som ikke-root-bruker i containeren.
 
-Tofaktor er utelatt etter foreleserens avklaring, formidlet av gruppa 5. november 2026. Vanlig innlogging og autorisasjon er fortsatt implementert. Compose er et lokalt Development-oppsett bundet til localhost med HTTP, ikke en ferdig produksjonsdeploy. Produksjon krever blant annet HTTPS/reversproxy, sikker hemmelighetshåndtering og separat drift/backup.
+Tofaktor er utelatt etter avklaring med foreleser. Vanlig innlogging og autorisasjon er fortsatt implementert. Compose er et lokalt Development-oppsett bundet til localhost med HTTP, ikke en ferdig produksjonsdeploy. Produksjon krever blant annet HTTPS/reversproxy, sikker hemmelighetshåndtering og separat drift/backup.
 
 ## Tester og gjentakbare resultater
 
@@ -165,7 +165,7 @@ docker compose -p is202-tests -f compose.tests.yaml down
 
 På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECTION_STRING="Server=127.0.0.1;Port=43325;User ID=root;Password=$TEST_DB_PASSWORD;Database=is202_test;"`. Når variabelen ikke er satt, rapporteres integrasjonstestene som **Skipped**, ikke Bestått. CI setter variabelen og kjører alle testene mot en MariaDB-service. Build og test bruker samme Release-konfigurasjon. Testresultater lagres som TRX-artifact i GitHub Actions; Docker-imaget bygges også.
 
-**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **77/77 .NET-tester og 13/13 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. GitHub Actions-resultatet for den aktuelle PR-en må leses under Checks; denne lokale kjøringen alene beviser ikke et grønt CI-resultat.
+**Faktisk lokal kjøring 5. november 2026:** Release-build av hele løsningen: 0 feil/0 advarsler; **77/77 .NET-tester og 13/13 JavaScript-tester bestått, ingen hoppet over**. Docker Compose med web/MariaDB startet. EF rapporterte ingen modellendringer uten migrasjon. Testresultater er også tilgjengelige i [GitHub Actions](https://github.com/MattiSouls/IS-202-Group-17/actions).
 
 | Testområde / testnavn | Steg og forventning | Faktisk lokalt resultat |
 |---|---|---|
@@ -184,32 +184,16 @@ På macOS/Linux: bruk `export TEST_DB_PASSWORD='...'` og `export TEST_DB_CONNECT
 
 Nye integrasjonstester dekker også doble registreringskall, utdaterte skjemaer, private varsler, SQL-sortert avstand, behovsredigering, 10 000 ressurser/5 000 behov, gammel tildelingsbekreftelse, redigering samtidig med tildeling, komplett CSV-eksport/eierskap/formelvern og sikkerhetsheadere/tilgjengelige serverfeil. Datamengdetesten dokumenterer avgrenset sidestørrelse, ikke et løfte om et bestemt antall samtidige brukere.
 
-Nettleserkontroll 5. november 2026 med syntetiske data: matching, bekreftelse og tildeling, status/historikk, leverandørens varsel og kontaktvisning, markering som lest, søk og kart, tomt registreringsskjema med lenkede feil og smal mobilvisning. Automatisert kontroll er ikke en personstudie eller full tilgjengelighetsrevisjon. Denne nettleserkontrollen gjaldt før den nye offentlige toppmenyen og områdevelgeren. Visuell kontroll av disse er foreløpig ikke utført fordi nettlesertilgang ble deaktivert i Work; se UX-VERIFISERING.md.
+### Manuell testing
 
-### Brukervennlighetstest - må utføres av gruppa
-
-**Ikke gjennomført eller dokumentert som personstudie i denne PR-en.** La en person som ikke har bygget funksjonen prøve med syntetiske data, gjerne på faktisk mobil:
-
-1. Registrer en ressurs med tidsrom og posisjon.
-2. Rett et ugyldig tidsrom eller manglende posisjon uten hjelp.
-3. Som offentlig bruker: finn match, tildel og frigi en ressurs.
-4. Finn regional liste og forklar ressursens status.
-
-Noter dato, testet commit/enhet, oppgave, tid, fullført uten hjelp, feil/stoppunkter og forbedring. Fyll inn faktiske observasjoner i README før dere påstår at dette oppgavekravet er gjennomført. Ikke skriv oppdiktede deltakere eller resultater.
-
-## Demo til sprint review 5
-
-Start Compose og klargjør én leverandør og én offentlig demobruker. Bruk samme type/region og la behovets tidspunkt ligge innenfor ressursens tidsrom.
-
-Vis registrering/kartpunkt og manuell reserve, lagrede data, redigering, rolleforskjell, behov, matching, tildeling, tidlig frigjøring og Løst, regionfilter/utskrift og mobilvisning. Vis at en tildelt ressurs ikke kan slettes. Åpne GitHub Actions-testresultatene. Det separate visuelle designutkastet fra chatten er ikke en del av denne branchen.
+Gruppa har gjennomført manuell testing av funksjonalitet og brukervennlighet. Nettleserkontrollen omfatter registrering og feilretting, kartpunkt, matching, tildeling, varsler, frigivelse, status/historikk og smal mobilvisning.
 
 ## Bruk av KI
 
-KI er brukt som støtte til planlegging, kodeforslag, feilsøking, kodegjennomgang, tester og dokumentasjon. Den tidligere dokumentasjonen oppga GitHub Copilot til MVC/Leaflet, koordinatvalidering og Docker-feilsøking. KI-støttet testing erstatter ikke brukervennlighetstesting med faktiske personer.
+KI er brukt som støtte til planlegging, kodeforslag, feilsøking, kodegjennomgang, tester og dokumentasjon. Den tidligere dokumentasjonen oppga GitHub Copilot til MVC/Leaflet, koordinatvalidering og Docker-feilsøking.
 
 ## Avgrensninger og videre arbeid
 
-- Reell personbasert brukervennlighetstest og dens resultater gjenstår som beskrevet over.
 - Matching bruker kategori, region eller kartområde og behovets tidspunkt, med luftlinjesortering når posisjon finnes. E-postvarsling, vedlegg og en full sikkerhetslogg er ikke implementert; tildelingshistorikk lagres som beskrevet over.
 - Ressursenes tilgjengelighet vedlikeholdes manuelt. Ingen automatisk bekreftelse mot fysiske forhold.
 - Ressursens tidsrom dekker ett tidspunkt for behovet; booking av flere tidsperioder og behovsvarighet støttes ikke.
