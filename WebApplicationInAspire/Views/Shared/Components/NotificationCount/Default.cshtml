@@ -1,0 +1,2 @@
+@model int
+<a asp-controller="Notifications" asp-action="Index" class="notification-link" data-notification-url="@Url.Action("Unread", "Notifications")" aria-label="Varsler, @Model uleste"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="notification-label">Varsler</span><span class="notification-count" data-count="@Model" hidden="@(Model == 0)">@(Model > 99 ? "99+" : Model.ToString())</span></a>

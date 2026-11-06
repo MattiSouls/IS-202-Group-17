@@ -1,0 +1,42 @@
+@using WebApplicationInAspire.Models
+@using WebApplicationInAspire.Services
+@model NotificationList
+@{
+    ViewData["Title"] = "Varsler og aktivitet";
+    var isPublic = User.IsInRole("PublicUser") || User.IsInRole("Admin");
+}
+<header class="page-heading">
+    <div><p class="eyebrow">OPPFØLGING</p><h1>Varsler og aktivitet <span class="status-pill">@Model.Unread uleste</span></h1><p>Nye beskjeder og tidligere hendelser for dine behov og ressurser. Kontaktinformasjon finner du på detaljsiden.</p></div>
+    @if (Model.Unread > 0) { <form asp-action="ReadAll" method="post"><input type="hidden" name="filter" value="@Model.Filter"/><button type="submit" class="btn btn-secondary">Marker alle som lest</button></form> }
+</header>
+<nav class="scope-switch notice-filters" aria-label="Filtrer beskjeder">
+    @foreach (var filter in new[] { "all", "unread", "read" })
+    { <a asp-action="Index" asp-route-filter="@filter" class="@(filter == Model.Filter ? "selected" : "")" aria-current="@(filter == Model.Filter ? "page" : null)">@(filter == "all" ? "Alle" : filter == "unread" ? "Uleste" : "Leste")</a> }
+</nav>
+@if (Model.Items.Count == 0)
+{
+    <div class="panel empty-state"><h2>@(Model.Filter == "unread" ? "Ingen uleste varsler" : Model.Filter == "read" ? "Ingen leste beskjeder" : "Ingen varsler ennå")</h2><p>Varsler lagres når en ressurs blir tildelt eller frigitt. Ulest betyr at beskjeden ikke er markert som lest, ikke at handling er påkrevd.</p>@if (Model.Filter != "all") { <a asp-action="Index" class="btn btn-secondary">Se all aktivitet</a> }</div>
+}
+else
+{
+    <section class="panel notification-feed" aria-label="Beskjeder">
+        @foreach (var notice in Model.Items)
+        {
+            var assigned = notice.Title == "Ressurs tildelt";
+            var resolved = notice.Title == "Behov løst";
+            <article class="notification-event @(notice.ReadAtUtc == null ? "unread" : "")">
+                <span class="event-icon @(assigned ? "assigned" : resolved ? "resolved" : "released")" aria-hidden="true">@(assigned ? "↗" : resolved ? "✓" : "↩")</span>
+                <div class="event-body">
+                    <div class="event-heading"><h2>@notice.Title @if (notice.ReadAtUtc == null) { <span class="status-pill green">Ulest</span> }</h2><time datetime="@notice.CreatedAtUtc.ToString("o")">@PortalDisplay.NorwayTime(notice.CreatedAtUtc).ToString("dd.MM.yyyy HH:mm")</time></div>
+                    <p>@PortalDisplay.NotificationSummary(notice)</p>
+                    <div class="actions">
+                        @if (isPublic && notice.NeedId.HasValue) { <a asp-controller="Need" asp-action="Details" asp-route-id="@notice.NeedId" class="btn btn-secondary btn-sm">Se behov #@notice.NeedId →</a> }
+                        else if (notice.ResourceId.HasValue) { <a asp-controller="Resource" asp-action="Details" asp-route-id="@notice.ResourceId" class="btn btn-secondary btn-sm">Se ressurs #@notice.ResourceId →</a> }
+                        @if (notice.ReadAtUtc == null) { <form asp-action="Read" method="post"><input type="hidden" name="id" value="@notice.Id"/><input type="hidden" name="filter" value="@Model.Filter"/><input type="hidden" name="page" value="@Model.Page"/><button type="submit" class="btn btn-secondary btn-sm">Marker som lest</button></form> }
+                    </div>
+                </div>
+            </article>
+        }
+    </section>
+    <partial name="_Paging" model="@(new Paging(Model.Page, Model.Total, "Notifications", "Index", new Dictionary<string,string> { ["filter"] = Model.Filter }, 20))"/>
+}

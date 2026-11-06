@@ -1,0 +1,9 @@
+@model WebApplicationInAspire.Models.Paging
+<nav class="pagination-bar" aria-label="Sidenavigasjon">
+    <span>@(Model.Total == 0 ? 0 : (Model.Page - 1) * Model.PageSize + 1)–@Math.Min(Model.Page * Model.PageSize, Model.Total) av @Model.Total</span>
+    <div class="actions">
+        @if (Model.Page > 1) { var previous = new Dictionary<string,string>(Model.Values) { ["page"] = (Model.Page - 1).ToString() }; <a class="btn btn-secondary btn-sm" asp-controller="@Model.Controller" asp-action="@Model.Action" asp-all-route-data="previous">← Forrige</a> }
+        <span aria-current="page">Side @Model.Page av @Model.Pages</span>
+        @if (Model.Page < Model.Pages) { var next = new Dictionary<string,string>(Model.Values) { ["page"] = (Model.Page + 1).ToString() }; <a class="btn btn-secondary btn-sm" asp-controller="@Model.Controller" asp-action="@Model.Action" asp-all-route-data="next">Neste →</a> }
+    </div>
+</nav>

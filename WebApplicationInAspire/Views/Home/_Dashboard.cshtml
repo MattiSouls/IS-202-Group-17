@@ -1,0 +1,117 @@
+@using System.Security.Claims
+@using WebApplicationInAspire.Models.Entities
+@using WebApplicationInAspire.Services
+@model WebApplicationInAspire.Models.DashboardViewModel
+@{
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var mine = !Model.ShowAllNeeds;
+}
+<div class="dashboard">
+    <header class="page-heading dashboard-heading">
+        <div>
+            <p class="eyebrow">@(Model.IsAdmin ? "ADMINISTRATOR" : Model.IsPublic ? "OFFENTLIG AKTØR" : "RESSURSLEVERANDØR")</p>
+            <h1>@(Model.IsPublic ? "Beredskapsoversikt" : "Mine ressurser og tildelinger")</h1>
+            @if (Model.IsPublic)
+            {
+                <p><strong>@Model.Uncovered udekkede behov</strong> · @Model.Urgent merket Haster · @Model.Assigned aktive tildelinger</p>
+                <nav class="scope-switch" aria-label="Hvilke behov vises">
+                    <a asp-action="Index" asp-route-scope="mine" class="@(mine ? "selected" : "")" aria-current="@(mine ? "page" : null)">Mine behov</a>
+                    <a asp-action="Index" asp-route-scope="all" class="@(Model.ShowAllNeeds ? "selected" : "")" aria-current="@(Model.ShowAllNeeds ? "page" : null)">Alle behov</a>
+                </nav>
+            }
+            else { <p>@Model.Resources egne ressurser · @Model.Assigned aktive tildelinger · @Model.Unread uleste varsler</p> }
+        </div>
+        <div class="actions">
+            @if (Model.IsPublic) { <a asp-controller="Need" asp-action="Register" class="btn btn-primary">＋ Registrer behov</a> }
+            else { <a asp-controller="Resource" asp-action="Register" class="btn btn-primary">＋ Registrer ressurs</a> }
+        </div>
+    </header>
+
+    @if (Model.IsPublic && Model.Urgent > 0)
+    {
+        <section class="attention-strip" aria-labelledby="attention-heading">
+            <div><h2 id="attention-heading">@Model.Urgent udekkede behov er merket Haster</h2><p>@(mine ? "Dine behov uten tildelt ressurs." : "Behov uten tildelt ressurs på tvers av registrerte brukere.") Prioriter vurdering og kontakt.</p></div>
+            <a asp-controller="Need" asp-action="Overview" asp-route-status="urgent" asp-route-mine="@mine" class="btn btn-secondary">Se hastebehov →</a>
+        </section>
+    }
+
+    <div class="stat-grid">
+        @if (Model.IsPublic)
+        {
+            <a class="stat-card" asp-controller="Need" asp-action="Overview" asp-route-status="uncovered" asp-route-mine="@mine"><span>Udekkede behov</span><strong>@Model.Uncovered</strong><small>@(mine ? "Mine behov uten ressurs" : "Alle behov uten ressurs") →</small></a>
+            <a class="stat-card" asp-controller="Need" asp-action="Overview" asp-route-status="Assigned" asp-route-mine="@mine"><span>Aktive tildelinger</span><strong>@Model.Assigned</strong><small>@(mine ? "Mine tildelinger" : "Alle tildelinger") →</small></a>
+        }
+        else
+        {
+            <a class="stat-card" asp-controller="Resource" asp-action="Overview"><span>Mine ressurser</span><strong>@Model.Resources</strong><small>Kontroller tilbudene →</small></a>
+            <a class="stat-card" asp-controller="Resource" asp-action="Overview" asp-route-status="assigned"><span>Aktive tildelinger</span><strong>@Model.Assigned</strong><small>Se hvem du skal kontakte →</small></a>
+        }
+        @if (Model.IsPublic) { <a class="stat-card" asp-controller="Resource" asp-action="Overview"><span>@(Model.IsAdmin ? "Alle registrerte ressurser" : "Registrerte ressurstilbud")</span><strong>@Model.Resources</strong><small>Kontroller plassering og tidsrom →</small></a> }
+        else { <a class="stat-card" asp-controller="Resource" asp-action="Overview" asp-route-status="offered"><span>Administrer tilbud</span><strong aria-hidden="true">→</strong><small>Oppdater tidsrom og status</small></a> }
+        <a class="stat-card" asp-controller="Notifications" asp-action="Index" asp-route-filter="unread"><span>Mine uleste varsler</span><strong>@Model.Unread</strong><small>Åpne nye beskjeder →</small></a>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="panel worklist-panel">
+            <div class="panel-heading">
+                <div><h2>@(Model.IsPublic ? "Prioritert arbeidsliste" : "Hold tilbudene klare")</h2>
+                    @if (Model.IsPublic) { <p class="form-text mb-0">@(mine ? "Mine udekkede behov" : "Alle udekkede behov") · høyest prioritet først, deretter tidspunkt</p> }
+                </div>
+                @if (Model.IsPublic) { <a asp-controller="Need" asp-action="Overview" asp-route-status="uncovered" asp-route-mine="@mine">Vis alle @Model.Uncovered →</a> }
+            </div>
+            @if (Model.IsPublic)
+            {
+                @if (Model.TimePassed > 0)
+                { <p class="time-attention"><a asp-controller="Need" asp-action="Overview" asp-route-status="time-passed" asp-route-mine="@mine">@Model.TimePassed udekkede behov har passert oppgitt tidspunkt →</a></p> }
+                @if (Model.Upcoming.Count == 0)
+                { <div class="empty-state"><h3>Ingen udekkede behov i denne visningen</h3><p>Tildelte og løste behov vises under Behov og tildelinger.</p><a asp-controller="Need" asp-action="Overview" asp-route-mine="@mine" class="btn btn-secondary">Se behov og tildelinger</a></div> }
+                else
+                {
+                    <div class="dashboard-worklist">
+                        @foreach (var need in Model.Upcoming)
+                        {
+                            var canManage = Model.IsAdmin || need.CreatedByUserId == userId;
+                            <article class="worklist-row">
+                                <div>
+                                    <div class="worklist-title"><h3><a asp-controller="Need" asp-action="Details" asp-route-id="@need.Id"><span class="record-id">#@need.Id</span> @need.Type</a></h3><span class="priority-badge @PortalDisplay.PriorityClass(need.Priority)">@PortalDisplay.Priority(need.Priority)</span></div>
+                                    <p class="worklist-location">@need.Region · @(string.IsNullOrWhiteSpace(need.Location) ? "Sted ikke oppgitt" : need.Location)</p>
+                                    <p>Trengs <time datetime="@need.NeededAt.ToString("yyyy-MM-ddTHH:mm")">@need.NeededAt.ToString("dd.MM.yyyy HH:mm")</time> · Norsk tid @if (need.NeededAt < Model.SnapshotAt) { <span class="time-passed">Tidspunkt passert</span> }</p>
+                                    <p class="worklist-state"><span class="status-pill">@PortalDisplay.Status(need.Status)</span> Ingen ressurs tildelt @if (!canManage) { <span>· En annen bruker følger opp</span> }</p>
+                                </div>
+                                <div class="worklist-actions">
+                                    @if (canManage) { <a asp-controller="Need" asp-action="Matches" asp-route-id="@need.Id" class="btn btn-primary" aria-label="Finn ressurser til behov @need.Id">Finn ressurs →</a> }
+                                    <a asp-controller="Need" asp-action="Details" asp-route-id="@need.Id" class="btn btn-secondary" aria-label="Se behov @need.Id">Se behov</a>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="quick-start"><h3>Er tilgjengeligheten fortsatt riktig?</h3><p>Oppdater tidsrom, plassering og kontaktperson. Ved tildeling finner du kontakt til den offentlige aktøren på ressursens detaljside.</p><a asp-controller="Resource" asp-action="Overview" class="btn btn-primary">Se mine ressurser</a></div>
+                <p>Tilbudene finnes gjennom matching på kategori, plassering og tidspunkt. Kontroller opplysningene når situasjonen endrer seg.</p>
+            }
+        </section>
+        <aside class="panel dashboard-notices">
+            <div class="panel-heading"><h2>Mine uleste varsler</h2><a asp-controller="Notifications" asp-action="Index" asp-route-filter="unread">Vis alle →</a></div>
+            @if (Model.UnreadNotices.Count == 0) { <p class="quiet-state">Ingen uleste varsler. Tidligere beskjeder ligger under aktivitet nedenfor.</p> }
+            else
+            {
+                @foreach (var notice in Model.UnreadNotices)
+                {
+                    <article class="dashboard-notice"><h3>@notice.Title</h3><time datetime="@notice.CreatedAtUtc.ToString("o")">@PortalDisplay.NorwayTime(notice.CreatedAtUtc).ToString("dd.MM HH:mm")</time><p>@PortalDisplay.NotificationSummary(notice)</p>
+                        @if (Model.IsPublic && notice.NeedId.HasValue) { <a asp-controller="Need" asp-action="Details" asp-route-id="@notice.NeedId">Se behov #@notice.NeedId →</a> }
+                        else if (notice.ResourceId.HasValue) { <a asp-controller="Resource" asp-action="Details" asp-route-id="@notice.ResourceId">Se ressurs #@notice.ResourceId →</a> }
+                    </article>
+                }
+            }
+            <details class="dashboard-activity"><summary>Siste leste aktivitet</summary>
+                @if (Model.Recent.Count == 0) { <p>Ingen leste beskjeder ennå.</p> }
+                else { @foreach (var notice in Model.Recent) { <div class="activity-line"><strong>@notice.Title</strong><time>@PortalDisplay.NorwayTime(notice.CreatedAtUtc).ToString("dd.MM HH:mm")</time></div> } }
+                <a asp-controller="Notifications" asp-action="Index">Åpne varsler og aktivitet →</a>
+            </details>
+        </aside>
+    </div>
+    <p class="dashboard-snapshot">Øyeblikksbilde fra @Model.SnapshotAt.ToString("dd.MM.yyyy HH:mm") (norsk tid). <a asp-action="Index" asp-route-scope="@(Model.ShowAllNeeds ? "all" : "mine")">Oppdater oversikten</a>. Behovstall følger valgt visning; varsler er alltid dine egne.</p>
+</div>

@@ -1,0 +1,44 @@
+@model WebApplicationInAspire.Models.SpatialSelection
+@{
+    var allowPoint = ViewData["AllowPoint"] is true;
+    var area = Model.Area;
+    var fieldNames = new[] { "AreaSouth", "AreaWest", "AreaNorth", "AreaEast", "Latitude", "Longitude" };
+    var show = Model.HasAreaInput || (allowPoint && (Model.Latitude.HasValue || Model.Longitude.HasValue))
+        || ViewData.ModelState.Any(entry => fieldNames.Contains(entry.Key, StringComparer.OrdinalIgnoreCase) && entry.Value?.Errors.Count > 0);
+}
+<details class="spatial-picker" data-area-picker data-allow-point="@allowPoint.ToString().ToLowerInvariant()" open="@show">
+    <summary>@(allowPoint ? "Velg punkt eller område i kartet (valgfritt)" : "Avgrens søket med et kartområde (valgfritt)")</summary>
+    <div class="spatial-body">
+        <p class="form-help" id="area-help">@(allowPoint ? "Velg et punkt, eller marker et rektangel som behovet gjelder. Med et område finner matching ressurser med registrert plassering innenfor grensen, også på tvers av regioner. Avstand måles fra midtpunktet." : "Marker et rektangel for å søke etter ressurser med registrert plassering innenfor området. Området erstatter regionfilteret; kategori og øvrige filtre gjelder fortsatt.") Du kan også skrive kjente koordinater i feltene under. Det tegnes ingen grense automatisk.</p>
+        <div class="actions spatial-tools" role="group" aria-label="Velg kartverktøy">
+            @if (allowPoint) { <button type="button" class="btn btn-secondary" data-pick-point aria-pressed="false" disabled>Velg punkt</button> }
+            <button type="button" class="btn btn-secondary" data-draw-area aria-pressed="false" disabled>Dra for å markere område</button>
+            <button type="button" class="btn btn-secondary" data-pick-corners aria-pressed="false" disabled>Velg to hjørner</button>
+            <button type="button" class="btn btn-secondary" data-cancel-area hidden>Avbryt markering</button>
+            <button type="button" class="btn btn-secondary" data-clear-area disabled>Fjern kartvalg</button>
+        </div>
+        <div data-area-map class="map-box" aria-label="@(allowPoint ? "Kart for behovets punkt eller område" : "Kart for søkeområde")"></div>
+        <p data-area-status role="status" aria-live="polite" class="spatial-status">@(area is not null ? "Et område er valgt. Du kan endre eller fjerne det." : allowPoint && Model.Latitude.HasValue && Model.Longitude.HasValue ? "Et punkt er valgt. Du kan endre eller fjerne det." : "Ingen områdeavgrensning er valgt.")</p>
+        <noscript><p>Kartverktøyet krever JavaScript. Du kan fortsatt bruke koordinatfeltene under.</p></noscript>
+        @if (allowPoint)
+        {
+            <fieldset class="spatial-coordinates" data-point-fields>
+                <legend>Punktkoordinater</legend>
+                <div class="field-grid">
+                    <div><label asp-for="Latitude" class="form-label">Breddegrad</label><input asp-for="Latitude" type="number" step="any" min="-90" max="90" class="form-control" aria-describedby="area-help"/><span asp-validation-for="Latitude"></span></div>
+                    <div><label asp-for="Longitude" class="form-label">Lengdegrad</label><input asp-for="Longitude" type="number" step="any" min="-180" max="180" class="form-control" aria-describedby="area-help"/><span asp-validation-for="Longitude"></span></div>
+                </div>
+            </fieldset>
+        }
+        <fieldset class="spatial-coordinates" data-area-fields>
+            <legend>Områdegrenser <span class="muted">(alle fire må fylles ut for et område)</span></legend>
+            <div class="field-grid">
+                <div><label asp-for="AreaSouth" class="form-label">Sørgrense (breddegrad)</label><input asp-for="AreaSouth" type="number" step="any" min="-90" max="90" class="form-control" aria-describedby="area-help"/><span asp-validation-for="AreaSouth"></span></div>
+                <div><label asp-for="AreaNorth" class="form-label">Nordgrense (breddegrad)</label><input asp-for="AreaNorth" type="number" step="any" min="-90" max="90" class="form-control" aria-describedby="area-help"/><span asp-validation-for="AreaNorth"></span></div>
+                <div><label asp-for="AreaWest" class="form-label">Vestgrense (lengdegrad)</label><input asp-for="AreaWest" type="number" step="any" min="-180" max="180" class="form-control" aria-describedby="area-help"/><span asp-validation-for="AreaWest"></span></div>
+                <div><label asp-for="AreaEast" class="form-label">Østgrense (lengdegrad)</label><input asp-for="AreaEast" type="number" step="any" min="-180" max="180" class="form-control" aria-describedby="area-help"/><span asp-validation-for="AreaEast"></span></div>
+            </div>
+        </fieldset>
+        @if (!allowPoint) { <button type="submit" class="btn btn-primary mt-3">Søk med kartvalget</button> }
+    </div>
+</details>

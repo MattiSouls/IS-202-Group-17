@@ -10,6 +10,9 @@ public class Resource
 {
     public int Id { get; set; }
 
+    public long Version { get; set; }
+    public Guid? CreationToken { get; set; }
+
     [Required, MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 

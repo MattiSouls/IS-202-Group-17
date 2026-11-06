@@ -2,8 +2,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace WebApplicationInAspire.Models;
 
-public class NeedViewModel : IValidatableObject
+public class NeedViewModel : SpatialSelection, IValidatableObject
 {
+    public int? Id { get; set; }
+    public long Version { get; set; }
+    public Guid RequestId { get; set; } = Guid.NewGuid();
+
     [Required(ErrorMessage = "Type er påkrevd")]
     [StringLength(100)]
     public string Type { get; set; } = string.Empty;
@@ -35,6 +39,13 @@ public class NeedViewModel : IValidatableObject
     /// <summary>MariaDB DATETIME støtter år fra 1000. Valider dette på serveren.</summary>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        foreach (var error in ValidateArea()) yield return error;
+        if (HasAreaInput && (Latitude.HasValue || Longitude.HasValue))
+            yield return new ValidationResult("Velg enten et punkt eller et område. Fjern punktkoordinatene hvis behovet gjelder et område.", [nameof(Latitude), nameof(Longitude)]);
+        if (RequestId == Guid.Empty)
+            yield return new ValidationResult("Skjemaet mangler registreringsnøkkel. Åpne et nytt skjema.", [nameof(RequestId)]);
+        if (Latitude.HasValue != Longitude.HasValue)
+            yield return new ValidationResult("Oppgi både breddegrad og lengdegrad, eller la begge stå tomme", [nameof(Latitude), nameof(Longitude)]);
         if (NeededAt is { Year: < 1000 })
         {
             yield return new ValidationResult("Velg et gyldig tidspunkt fra år 1000", [nameof(NeededAt)]);

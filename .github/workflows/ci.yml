@@ -35,7 +35,7 @@ jobs:
       - run: dotnet tool restore
       - run: dotnet ef migrations has-pending-model-changes --project WebApplicationInAspire --configuration Release --no-build
       - run: dotnet test WebApplicationInAspire.slnx --configuration Release --no-build --logger "trx;LogFileName=tests.trx" --results-directory TestResults
-      - run: node --test WebApplicationInAspire.Tests/resource-position.test.cjs
+      - run: node --test WebApplicationInAspire.Tests/resource-position.test.cjs WebApplicationInAspire.Tests/area-picker.test.cjs
       - run: docker build -t is202-verification .
       - uses: actions/upload-artifact@v4
         if: always()

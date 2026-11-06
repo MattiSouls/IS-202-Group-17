@@ -1,7 +1,7 @@
 @model WebApplicationInAspire.Models.ResourceViewModel
 <div class="mb-3">
-    <label asp-for="Region" class="form-label">Region:</label>
-    <input asp-for="Region" class="form-control" />
+    <label asp-for="Region" class="form-label">Region *</label>
+    <input asp-for="Region" list="region-options" class="form-control" />
     <span asp-validation-for="Region" class="text-danger"></span>
 </div>
 <div class="form-check mb-3">
@@ -11,12 +11,12 @@
 <p id="period-help">Oppgi tidsrommet ressursen kan brukes, i norsk lokal tid. Fjern tilgjengelighetskrysset hvis tilbudet trekkes tilbake.</p>
 <div class="row">
     <div class="col-12 col-md-6 mb-3">
-        <label asp-for="AvailableFrom" class="form-label"></label>
+        <label asp-for="AvailableFrom" class="form-label">Tilgjengelig fra (norsk tid) *</label>
         <input asp-for="AvailableFrom" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local" class="form-control" aria-describedby="period-help" />
         <span asp-validation-for="AvailableFrom" class="text-danger"></span>
     </div>
     <div class="col-12 col-md-6 mb-3">
-        <label asp-for="AvailableUntil" class="form-label"></label>
+        <label asp-for="AvailableUntil" class="form-label">Tilgjengelig til (norsk tid) *</label>
         <input asp-for="AvailableUntil" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local" class="form-control" aria-describedby="period-help" />
         <span asp-validation-for="AvailableUntil" class="text-danger"></span>
     </div>
