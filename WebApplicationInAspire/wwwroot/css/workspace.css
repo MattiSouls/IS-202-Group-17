@@ -154,3 +154,26 @@ h1,h2,h3,p,.page-heading>div,.match-card>div,.notice-row,.task-item>div,.panel{o
 
 
 .status-explanation{font-size:.875rem;color:var(--muted);max-width:1000px}
+.connection-map a {
+    outline: none;
+    cursor: pointer;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 0.2s ease;
+    animation: map-glow 2.5s ease-in-out infinite;
+}
+
+.connection-map a:hover {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.8));
+    animation: none;
+}
+
+@keyframes map-glow {
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0)); }
+    50% { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .connection-map a { animation: none; transition: none; }
+}
