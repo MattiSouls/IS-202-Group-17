@@ -1,4 +1,4 @@
-# Ressursportalen - IS-202 Gruppe 17
+# Beredt - IS-202 Gruppe 17
 
 ASP.NET Core MVC-applikasjon som kobler offentlige beredskapsbehov med ressurser fra leverandører. Løsningen bruker MariaDB, ASP.NET Core Identity, Leaflet og Docker Compose.
 
