@@ -10,11 +10,23 @@ public class Resource
 {
     public int Id { get; set; }
 
+    public long Version { get; set; }
+    public Guid? CreationToken { get; set; }
+
     [Required, MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
     [Required, MaxLength(100)]
     public string Type { get; set; } = string.Empty;
+
+    [Required, MaxLength(200)]
+    public string Region { get; set; } = string.Empty;
+
+    public bool IsAvailable { get; set; } = true;
+
+    /// <summary>Norsk lokal tid. Null betyr at eier må oppdatere en eldre registrering.</summary>
+    public DateTime? AvailableFrom { get; set; }
+    public DateTime? AvailableUntil { get; set; }
 
     [MaxLength(4000)]
     public string? Description { get; set; }

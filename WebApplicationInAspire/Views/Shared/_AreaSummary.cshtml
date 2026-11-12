@@ -1,0 +1,7 @@
+@model WebApplicationInAspire.Models.GeoArea
+@using System.Globalization
+<details class="area-preview" data-area-preview data-south="@Model.South.ToString(CultureInfo.InvariantCulture)" data-west="@Model.West.ToString(CultureInfo.InvariantCulture)" data-north="@Model.North.ToString(CultureInfo.InvariantCulture)" data-east="@Model.East.ToString(CultureInfo.InvariantCulture)">
+    <summary>Vis valgt kartområde</summary>
+    <div data-preview-map class="map-box" aria-label="Behovets valgte område"></div>
+    <p data-preview-status role="status" class="form-text">Sør @Model.South.ToString("F5") · Nord @Model.North.ToString("F5") · Vest @Model.West.ToString("F5") · Øst @Model.East.ToString("F5"). Ressursens registrerte punkt må ligge innenfor disse grensene.</p>
+</details>

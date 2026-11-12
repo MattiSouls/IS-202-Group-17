@@ -1,0 +1,53 @@
+@model WebApplicationInAspire.Models.Account.LoginViewModel
+@{
+    ViewData["Title"] = "Logg inn";
+    var needsAccess = Model.ReturnUrl?.StartsWith("/Need/", StringComparison.OrdinalIgnoreCase) == true;
+}
+
+<section class="panel auth-panel"><img class="auth-emblem" src="~/img/beredt-emblem.svg" alt="" /><h1 class="h3 mb-3">Logg inn i Beredt</h1>
+@if (needsAccess)
+{
+    <div class="form-help"><strong>Registrering og oppfølging av behov</strong><p class="mb-0 mt-2">Logg inn med en offentlig brukerkonto. Du fortsetter til behovssiden etter innlogging. Trenger organisasjonen tilgang, kontakt portalens administrator.</p></div>
+}
+
+<div>
+    <div>
+        <form asp-action="Login" method="post" novalidate>
+            <partial name="_FormErrors" />
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="username" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label"></label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Logg inn</button>
+        </form>
+
+        @if (needsAccess)
+        {
+            <p class="mt-3">Skal du tilby en ressurs? <a asp-controller="Resource" asp-action="Register">Gå til ressursregistrering</a></p>
+        }
+        else
+        {
+            <p class="mt-3">Ny ressursleverandør? <a asp-action="Register">Opprett leverandørkonto</a></p>
+        }
+    </div>
+</div>
+
+</section>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

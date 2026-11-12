@@ -1,53 +1,70 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+@using WebApplicationInAspire.Security
+@{
+    var section = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var loggedIn = User.Identity?.IsAuthenticated == true;
+    var isPublic = User.IsInRole(RoleNames.PublicUser) || User.IsInRole(RoleNames.Admin);
+    var role = User.IsInRole(RoleNames.Admin) ? "Administrator" : isPublic ? "Offentlig aktør" : "Ressursleverandør";
+}
+<!DOCTYPE html>
+<html lang="nb">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - WebApplicationInAspire</title>
-    <script type="importmap"></script>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - Beredt</title>
+    <link rel="icon" href="~/img/beredt-icon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="~/favicon.ico" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/WebApplicationInAspire.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/workspace.css" asp-append-version="true" />
+    @if (ViewData["WelcomePage"] is true)
+    {
+        <link rel="stylesheet" href="~/css/welcome.css" asp-append-version="true" />
+    }
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">WebApplicationInAspire</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-    <a class="nav-link text-dark" asp-area="" asp-controller="Resource" asp-action="Register">Registrer ressurs</a>
-</li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - WebApplicationInAspire - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+<body class="@(loggedIn ? "" : "public-site")">
+<a class="skip-link" href="#main-content">Hopp til innhold</a>
+@if(loggedIn)
+{
+<aside class="offcanvas-lg offcanvas-start app-sidebar" tabindex="-1" id="appNavigation" aria-label="Hovednavigasjon">
+    <div class="offcanvas-header"><span class="brand-name">Beredt</span><button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#appNavigation" aria-label="Lukk meny"></button></div>
+    <a asp-controller="Home" asp-action="Index" class="app-brand"><img class="brand-symbol" src="~/img/beredt-icon.svg" alt="" /><span>Beredt<small>Felles oversikt. Bedre beredskap.</small></span></a>
+    <div class="workspace-label">ARBEIDSOMRÅDE</div>
+    <nav aria-label="Sider">
+        <a asp-controller="Home" asp-action="Index" class="nav-entry @(section == "Home" && action == "Index" ? "active" : "")" aria-current="@(section == "Home" && action == "Index" ? "page" : null)"><span aria-hidden="true">▦</span> Oversikt</a>
+        <a asp-controller="Resource" asp-action="Overview" class="nav-entry @(section == "Resource" ? "active" : "")" aria-current="@(section == "Resource" ? "page" : null)"><span aria-hidden="true">▤</span> @(isPublic ? "Finn ressurser" : "Mine ressurser")</a>
+            @if (isPublic)
+            { <a asp-controller="Need" asp-action="Overview" class="nav-entry @(section == "Need" ? "active" : "")" aria-current="@(section == "Need" ? "page" : null)"><span aria-hidden="true">⚑</span> Behov og tildelinger</a> }
+            <a asp-controller="Notifications" asp-action="Index" class="nav-entry @(section == "Notifications" ? "active" : "")" aria-current="@(section == "Notifications" ? "page" : null)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg> Varsler</a>
+    </nav>
+    <div class="sidebar-bottom"><p class="eyebrow">GODT Å VITE</p><p>Kontakt leverandøren for å avtale praktisk bruk. Tilgjengelighet oppdateres av eieren.</p><a asp-controller="Home" asp-action="Privacy">Personvern og databruk</a></div>
+</aside>
+}
+<div class="app-workspace">
+@if(!loggedIn)
+{
+<header class="public-header"><a asp-controller="Home" asp-action="Index" class="app-brand"><img class="brand-symbol" src="~/img/beredt-emblem.svg" alt="" /><span>Beredt<small>Felles oversikt. Bedre beredskap.</small></span></a><nav aria-label="Hovednavigasjon"><a asp-controller="Need" asp-action="Register">Registrer behov</a><a asp-controller="Account" asp-action="Register">Opprett leverandørkonto</a><a asp-controller="Account" asp-action="Login" class="btn btn-primary">Logg inn</a></nav></header>
+}
+else
+{
+    <header class="topbar">
+        <div class="d-flex align-items-center gap-3"><button class="btn btn-quiet d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#appNavigation" aria-controls="appNavigation" aria-label="Åpne meny">☰</button><span class="topbar-title">Beredskap / <strong>@ViewData["Title"]</strong></span></div>
+        <div class="topbar-account">
+            @await Component.InvokeAsync("NotificationCount")
+                <span class="role-chip">@role</span>
+                <details class="account-menu"><summary aria-label="Åpne kontomeny">Konto</summary><div><p>@User.Identity?.Name</p><form asp-controller="Account" asp-action="Logout" method="post"><button type="submit" class="btn btn-secondary w-100">Logg ut</button></form></div></details>
         </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    </header>
+}
+    <main id="main-content" tabindex="-1" class="workspace-main @ViewData["MainClass"]">
+        @if (TempData["SuccessMessage"] is string success) { <div class="feedback success" role="status"><strong>Utført.</strong> @success</div> }
+        @if (TempData["ErrorMessage"] is string error) { <div class="feedback warning" role="alert">@error</div> }
+        @RenderBody()
+    </main>
+    <footer class="app-footer"><span>@(ViewData["WelcomePage"] is true ? "Beredt · Oversikt og samhandling" : "Beredt · Bygget av mange, til nytte for alle")</span><a asp-controller="Home" asp-action="Privacy">Personvern</a></footer>
+</div>
+<div id="notification-announcement" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+<script src="~/js/workspace.js" asp-append-version="true"></script>
 </body>
 </html>

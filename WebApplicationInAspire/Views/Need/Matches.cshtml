@@ -1,0 +1,19 @@
+@using WebApplicationInAspire.Models
+@using WebApplicationInAspire.Models.Entities
+@using WebApplicationInAspire.Services
+@model NeedMatchesViewModel
+@{ViewData["Title"]="Finn passende ressurser"; var need=Model.Need; var area=MatchingRules.Area(need); var origin=MatchingRules.Origin(need);}
+<a asp-action="Details" asp-route-id="@need.Id" class="back-link">← Til behovet</a>
+<header class="page-heading"><div><p class="eyebrow">MATCHING / BEHOV #@need.Id</p><h1>Ressurser til @need.Type.ToLower()</h1><p>Treffene oppfyller alle kriteriene under. Du kontrollerer detaljene før du tildeler.</p></div></header>
+<div class="match-criteria"><span class="criterion">Kategori <strong>@need.Type</strong></span><span class="criterion">@(area is null?"Region":"Geografi") <strong>@(area is null?need.Region:"Valgt kartområde")</strong></span><span class="criterion">Tidspunkt <strong>@need.NeededAt.ToString("dd.MM.yyyy HH:mm")</strong></span></div>
+@if(area is not null){<partial name="_AreaSummary" model="area"/><p class="form-text">Ressursens registrerte plassering må ligge innenfor området. Regiongrenser brukes ikke i dette søket.</p>}
+@if(!MatchingRules.CanAssign(need)){<div class="feedback warning">Dette behovet er @PortalDisplay.Status(need.Status). <a asp-action="Details" asp-route-id="@need.Id">Åpne behovet for å frigi eller gjenåpne det.</a></div>}
+else if(Model.Total==0){<div class="panel empty-state"><h2>Ingen ledige tilbud oppfyller alle kriteriene</h2><p>Kontroller kategori, valgt region/kartområde og tidspunkt. En ressurs må være tilbudt av eieren, dekke tidspunktet og ikke være tildelt et annet behov.</p>@if(Model.CanManage){<a asp-action="Edit" asp-route-id="@need.Id" class="btn btn-primary">Kontroller og rediger behov</a>}<a asp-controller="Resource" asp-action="Overview" class="btn btn-secondary">Se alle tilbud</a></div>}
+else{
+<div class="list-meta"><span><strong>@Model.Total</strong> passende @(Model.Total==1?"ressurs":"ressurser")</span><span>@(origin.HasValue?(area is null?"Nærmeste først · luftlinje, ikke reisetid":"Nærmest områdets midtpunkt · luftlinje, ikke reisetid"):"Sortert etter ressursnavn")</span></div>
+<div class="match-list">@foreach(var resource in Model.Resources){<article class="panel match-card"><div><h2>@resource.Name</h2><p>@resource.Description</p><p><partial name="_ResourcePeriod" model="resource"/> · Norsk tid</p><div class="match-reasons"><span>✓ Samme kategori</span><span>✓ @(area is null?"Samme region":"Innenfor valgt område")</span><span>✓ Dekker tidspunktet</span><span>✓ Ledig for tildeling</span></div>@if(origin is {} reference){<p class="mt-2"><strong>@PortalDisplay.Distance(reference.Latitude,reference.Longitude,resource.Latitude,resource.Longitude).ToString("F1") km</strong> @(area is null?"luftlinje fra behovspunktet":"luftlinje fra områdets midtpunkt")</p>}</div>
+@if(Model.CanManage){<a asp-action="Review" asp-route-id="@need.Id" asp-route-resourceId="@resource.Id" class="btn btn-primary" aria-label="Vurder tildeling av @resource.Name">Vurder tildeling →</a>}else{<span class="muted">Oppretter/admin kan tildele</span>}</article>}</div>
+<partial name="_Paging" model="@(new Paging(Model.Page,Model.Total,"Need","Matches",new Dictionary<string,string>{["id"]=need.Id.ToString()}))"/>
+}
+
+@section Scripts { <link rel="stylesheet" href="~/lib/leaflet/leaflet.css"/><script src="~/lib/leaflet/leaflet.js"></script><script src="~/js/area-picker.js" asp-append-version="true"></script> }

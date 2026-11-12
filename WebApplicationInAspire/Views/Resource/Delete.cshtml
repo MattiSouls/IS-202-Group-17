@@ -1,19 +1,5 @@
-﻿@model WebApplicationInAspire.Models.Entities.Resource
-
-@{
-    ViewData["Title"] = "Slett ressurs";
-}
-
-<h2>Slett ressurs</h2>
-<p>Er du sikker på at du vil slette denne ressursen?</p>
-
-<div>
-    <h4>@Model.Name</h4>
-    <p><strong>Type:</strong> @Model.Type</p>
-    <p><strong>Kontaktperson:</strong> @Model.ContactName (@Model.PhoneNumber)</p>
-</div>
-
-<form method="post" asp-controller="Resource" asp-action="Delete" asp-route-id="@Model.Id">
-    <button type="submit" style="color: red;">Bekreft sletting</button>
-    <a asp-action="Overview">Avbryt</a>
-</form>
+@model WebApplicationInAspire.Models.Entities.Resource
+@{ViewData["Title"]="Slett ressurs";}
+<div class="form-page"><a asp-action="Details" asp-route-id="@Model.Id" class="back-link">← Til ressursen</a><header class="page-heading"><div><p class="eyebrow">BEKREFT HANDLING</p><h1>Slett ressurs</h1><p>Kontroller ressursen før du bekrefter.</p></div></header><div class="panel"><h2>@Model.Name</h2><p class="muted">@Model.Type · @Model.Region · @Model.ContactName</p>
+@if(ViewData["IsAssigned"] is true){<div class="feedback warning" role="alert">@(ViewData["ErrorMessage"]??"Ressursen er tildelt. Den må frigis før den kan slettes.")</div>}else{<div class="feedback warning">Ressursen fjernes fra oversikten. Denne handlingen kan ikke angres.</div>}
+<form asp-action="Delete" asp-route-id="@Model.Id" method="post"><div class="form-actions"><button type="submit" class="btn btn-danger" disabled="@(ViewData["IsAssigned"] is true)">Bekreft sletting</button><a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">Avbryt</a></div></form></div></div>

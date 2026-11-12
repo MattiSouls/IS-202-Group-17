@@ -1,0 +1,25 @@
+@model WebApplicationInAspire.Models.NeedViewModel
+@{ ViewData["Title"] = Model.Id.HasValue ? "Rediger behov" : "Registrer behov"; }
+<div class="form-page">
+<a asp-action="Overview" class="back-link">← Behov og tildelinger</a>
+<header class="page-heading"><div><p class="eyebrow">OFFENTLIG AKTØR</p><h1>@ViewData["Title"]</h1><p>Beskriv hva som trengs, hvor og når. Felter merket * må fylles ut.</p></div></header>
+<div class="panel">
+<form asp-action="@(Model.Id.HasValue ? "Edit" : "Register")" asp-route-id="@Model.Id" method="post" novalidate>
+<input type="hidden" asp-for="Id" /><input type="hidden" asp-for="Version" /><input type="hidden" asp-for="RequestId" />
+<partial name="_FormErrors" />
+<fieldset class="form-section"><legend>1. Hva trengs?</legend><div class="field-grid">
+<div><label asp-for="Type" class="form-label">Ressurskategori *</label><input asp-for="Type" list="type-options" class="form-control" aria-describedby="need-type-help" /><span asp-validation-for="Type"></span><div class="form-text" id="need-type-help">Samme kategorier brukes i ressursregistreringen. Velg for eksempel Pumpe.</div></div>
+<div><label asp-for="Priority" class="form-label">Prioritet *</label><select asp-for="Priority" class="form-select"><option value="">Velg prioritet</option><option value="Low">Lav</option><option value="Medium">Middels</option><option value="High">Høy</option><option value="Urgent">Haster</option></select><span asp-validation-for="Priority"></span></div>
+</div></fieldset>
+<fieldset class="form-section"><legend>2. Hvor og når trengs hjelpen?</legend><div class="field-grid">
+<div><label asp-for="Region" class="form-label">Region *</label><input asp-for="Region" list="region-options" class="form-control" /><span asp-validation-for="Region"></span></div>
+<div><label asp-for="NeededAt" class="form-label">Når trengs ressursen? (norsk tid) *</label><input asp-for="NeededAt" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local" min="1000-01-01T00:00" class="form-control" /><span asp-validation-for="NeededAt"></span></div>
+<div class="wide"><label asp-for="Location" class="form-label">Sted eller adresse <span class="muted">(valgfritt)</span></label><input asp-for="Location" class="form-control" placeholder="For eksempel Lund, Kristiansand" /><span asp-validation-for="Location"></span></div>
+</div>
+@{ ViewData["AllowPoint"] = true; }
+<partial name="_AreaPicker" model="Model" />
+</fieldset>
+<fieldset class="form-section"><legend>3. Hvem følger opp behovet?</legend><div class="field-grid"><div><label asp-for="ContactName" class="form-label">Kontaktperson *</label><input asp-for="ContactName" autocomplete="name" class="form-control" /><span asp-validation-for="ContactName"></span></div><div><label asp-for="PhoneNumber" class="form-label">Telefonnummer *</label><input asp-for="PhoneNumber" type="tel" autocomplete="tel" class="form-control" /><span asp-validation-for="PhoneNumber"></span></div></div></fieldset>
+<div class="form-actions"><button type="submit" class="btn btn-primary">@(Model.Id.HasValue ? "Lagre endringer" : "Registrer behov")</button><a asp-action="Overview" class="btn btn-secondary">Avbryt</a></div>
+</form></div></div><partial name="_Options" />
+@section Scripts { <link rel="stylesheet" href="~/lib/leaflet/leaflet.css" /><script src="~/lib/leaflet/leaflet.js"></script><script src="~/js/area-picker.js" asp-append-version="true"></script><partial name="_ValidationScriptsPartial" /> }

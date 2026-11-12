@@ -218,6 +218,183 @@ namespace WebApplicationInAspire.DataAccess.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("WebApplicationInAspire.Models.Entities.AllocationEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("ActorUserId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("NeedId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ResourceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResourceName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("NeedId", "Id");
+
+                    b.ToTable("AllocationEvents");
+                });
+
+            modelBuilder.Entity("WebApplicationInAspire.Models.Entities.Need", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double?>("AreaEast")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("AreaNorth")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("AreaSouth")
+                        .HasColumnType("double");
+
+                    b.Property<double?>("AreaWest")
+                        .HasColumnType("double");
+
+                    b.Property<int?>("AssignedResourceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContactName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<Guid?>("CreationToken")
+                        .HasColumnType("char(36)");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double");
+
+                    b.Property<DateTime>("NeededAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedResourceId");
+
+                    b.HasIndex("CreatedByUserId", "CreationToken")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "NeededAt");
+
+                    b.ToTable("Needs", (string)null);
+                });
+
+            modelBuilder.Entity("WebApplicationInAspire.Models.Entities.PortalNotification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1200)
+                        .HasColumnType("varchar(1200)");
+
+                    b.Property<int?>("NeedId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("ResourceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("varchar(160)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NeedId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("UserId", "ReadAtUtc", "Id");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("WebApplicationInAspire.Models.Entities.Resource", b =>
                 {
                     b.Property<int>("Id")
@@ -225,6 +402,12 @@ namespace WebApplicationInAspire.DataAccess.Migrations
                         .HasColumnType("int");
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AvailableFrom")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("AvailableUntil")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("ContactName")
                         .IsRequired()
@@ -234,9 +417,17 @@ namespace WebApplicationInAspire.DataAccess.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid?>("CreationToken")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("Description")
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
+
+                    b.Property<bool>("IsAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
 
                     b.Property<double>("Latitude")
                         .HasColumnType("double");
@@ -259,14 +450,28 @@ namespace WebApplicationInAspire.DataAccess.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId");
+                    b.HasIndex("Latitude", "Longitude");
+
+                    b.HasIndex("OwnerId", "CreationToken")
+                        .IsUnique();
+
+                    b.HasIndex("Region", "Type");
 
                     b.ToTable("Resources", (string)null);
                 });
@@ -320,6 +525,66 @@ namespace WebApplicationInAspire.DataAccess.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("WebApplicationInAspire.Models.Entities.AllocationEvent", b =>
+                {
+                    b.HasOne("WebApplicationInAspire.Models.Entities.Need", "Need")
+                        .WithMany()
+                        .HasForeignKey("NeedId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("WebApplicationInAspire.Models.Entities.Resource", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Need");
+
+                    b.Navigation("Resource");
+                });
+
+            modelBuilder.Entity("WebApplicationInAspire.Models.Entities.Need", b =>
+                {
+                    b.HasOne("WebApplicationInAspire.Models.Entities.Resource", "AssignedResource")
+                        .WithMany()
+                        .HasForeignKey("AssignedResourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedResource");
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("WebApplicationInAspire.Models.Entities.PortalNotification", b =>
+                {
+                    b.HasOne("WebApplicationInAspire.Models.Entities.Need", "Need")
+                        .WithMany()
+                        .HasForeignKey("NeedId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("WebApplicationInAspire.Models.Entities.Resource", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Need");
+
+                    b.Navigation("Resource");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("WebApplicationInAspire.Models.Entities.Resource", b =>
