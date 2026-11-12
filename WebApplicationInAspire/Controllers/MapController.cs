@@ -25,24 +25,28 @@ public class MapController(ApplicationDbContext database) : Controller
         var isPublic = User.IsInRole(RoleNames.PublicUser) || isAdmin;
 
         var resources = await database.VisibleResources(ownerId: isPublic ? null : id, offersOnly: isPublic && !isAdmin)
-            .OrderBy(r => r.Name).Take(Limit).ToListAsync();
+            .OrderBy(r => r.Name).ThenBy(r => r.Id).Take(Limit + 1).ToListAsync();
+        var resourcesTruncated = resources.Count > Limit;
+        resources = resources.Take(Limit).ToList();
         var resourceIds = resources.Select(r => r.Id).ToList();
         var assigned = (await database.Needs.AsNoTracking()
             .Where(n => n.Status == NeedStatuses.Assigned && n.AssignedResourceId != null && resourceIds.Contains(n.AssignedResourceId.Value))
             .Select(n => n.AssignedResourceId!.Value).ToListAsync()).ToHashSet();
 
         var needs = isPublic
-            ? await database.Needs.AsNoTracking().Uncovered().InPriorityOrder().Take(Limit).ToListAsync()
+            ? await database.Needs.AsNoTracking().Uncovered().InPriorityOrder().Take(Limit + 1).ToListAsync()
             : [];
 
         return View(new MapViewModel
         {
             CanSeeNeeds = isPublic,
+            ResourcesTruncated = resourcesTruncated,
+            NeedsTruncated = needs.Count > Limit,
             CanRegisterNeed = isPublic,
             CanRegisterResource = User.IsInRole(RoleNames.ResourceProvider) || isAdmin,
             Resources = resources.Select(r => new MapResource(r.Id, r.Name, r.Type, r.Region, r.Latitude, r.Longitude,
                 PortalDisplay.Availability(r, assigned.Contains(r.Id)))).ToList(),
-            Needs = needs.Select(n =>
+            Needs = needs.Take(Limit).Select(n =>
             {
                 var area = MatchingRules.Area(n);
                 var origin = MatchingRules.Origin(n);

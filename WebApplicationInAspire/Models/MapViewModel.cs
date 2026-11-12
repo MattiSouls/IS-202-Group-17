@@ -3,6 +3,8 @@ namespace WebApplicationInAspire.Models;
 /// <summary>Data til kartsiden. Inneholder ikke kontaktopplysninger.</summary>
 public class MapViewModel
 {
+    public bool ResourcesTruncated { get; init; }
+    public bool NeedsTruncated { get; init; }
     public bool CanSeeNeeds { get; init; }
     public bool CanRegisterNeed { get; init; }
     public bool CanRegisterResource { get; init; }

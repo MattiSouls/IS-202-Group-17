@@ -36,6 +36,10 @@
         </section>
 
         <div class="map-side-body" data-side-body>
+            @if (Model.ResourcesTruncated || Model.NeedsTruncated)
+            {
+                <p class="feedback warning" role="status">Kartet og søket viser opptil 500 av hver type. Flere registreringer finnes. Bruk <a asp-controller="Resource" asp-action="Overview">hele ressurslisten</a>@if (Model.CanSeeNeeds) { <text> eller <a asp-controller="Need" asp-action="Overview">hele behovslisten</a></text> } for å søke i alle.</p>
+            }
             <div class="map-tabs" role="tablist" aria-label="Vis i sidepanelet">
                 @if (Model.CanSeeNeeds) { <button type="button" role="tab" id="tab-needs" aria-controls="panel-needs" aria-selected="true" data-tab="needs">Behov <span class="count">@Model.Needs.Count</span></button> }
                 <button type="button" role="tab" id="tab-resources" aria-controls="panel-resources" aria-selected="@(Model.CanSeeNeeds ? "false" : "true")" data-tab="resources">@(Model.CanSeeNeeds ? "Ressurser" : "Mine ressurser") <span class="count">@Model.Resources.Count</span></button>

@@ -212,6 +212,7 @@
         const el = map.getContainer();
         el.addEventListener('pointerdown', e => {
             if (placing !== 'need' || shape !== 'drag' || drag || e.button !== 0 || e.isPrimary === false || e.target.closest('.leaflet-control')) return;
+            clearDraft(); resetTexts();
             drag = { id: e.pointerId, start: map.mouseEventToLatLng(e), x: e.clientX, y: e.clientY };
             try { el.setPointerCapture(e.pointerId); } catch { drag = null; }
         });
@@ -229,6 +230,7 @@
             const moved = Math.hypot(e.clientX - drag.x, e.clientY - drag.y) >= 6;
             const v = boundsOf(drag.start, map.mouseEventToLatLng(e));
             drag = null;
+            if (e.type === 'pointercancel') { clearDraft(); resetTexts(); return; }
             if (moved && e.type === 'pointerup' && validBounds(v)) {
                 setArea(v);
                 // Hindrer at slipp-klikket blir tolket som første hjørne.
