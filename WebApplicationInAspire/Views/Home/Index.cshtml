@@ -1,45 +1,64 @@
 @using WebApplicationInAspire.Services
 @model WebApplicationInAspire.Models.DashboardViewModel
-@{ViewData["Title"]=Model is null ? "Oversikt" : Model.IsPublic ? "Beredskapsoversikt" : "Mine ressurser"; if(Model is not null) ViewData["MainClass"]="dashboard-workspace";}
+@{ViewData["Title"]=Model is null ? "Oversikt" : Model.IsPublic ? "Beredskapsoversikt" : "Mine ressurser"; if(Model is not null) ViewData["MainClass"]="dashboard-workspace"; else ViewData["WelcomePage"]=true;}
 @if(Model is null)
 {
-    <section class="landing">
-        <div class="landing-hero">
-            <div class="hero-copy">
-                <p class="hero-kicker">SAMHANDLING I BEREDSKAP</p>
-                <h1>Bygget av mange,<br/><span>til nytte for alle.</span></h1>
-                <p class="hero-description">Offentlige aktører melder inn beredskapsbehov. Bedrifter, organisasjoner og frivillige tilbyr ressurser som pumper, aggregater og transport.</p>
-                <div class="actions hero-actions">
-                    <a asp-controller="Need" asp-action="Register" class="btn btn-need">Registrer behov →</a>
-                    <a asp-controller="Resource" asp-action="Register" class="btn btn-hero-outline">Registrer ressurs</a>
+    <section class="welcome" aria-labelledby="welcome-title">
+        <div class="welcome-hero">
+            <div class="welcome-copy">
+                <p class="welcome-kicker">SAMHANDLING I BEREDSKAP</p>
+                <h1 id="welcome-title">Bygget av mange,<br /><span>til nytte for alle.</span></h1>
+                <p class="welcome-description">Offentlige aktører melder inn behov, mens bedrifter, organisasjoner og frivillige deler tilgjengelige ressurser. Slik finner vi sammen ressursene som trengs når beredskapen settes på prøve.</p>
+                <div class="welcome-actions">
+                    <a asp-controller="Need" asp-action="Register" class="btn welcome-primary">Registrer behov <span aria-hidden="true">→</span></a>
+                    <a asp-controller="Resource" asp-action="Register" class="btn welcome-secondary">Tilby en ressurs</a>
                 </div>
-                <p class="hero-access">Begge handlingene krever innlogging. Ny leverandør? Opprett konto under. Offentlige aktører får tilgang fra portalens administrator.</p>
             </div>
-            <div class="hero-visual" aria-hidden="true">
-                <img class="hero-emblem" src="~/img/beredt-emblem.svg" alt="" />
-                <span class="hero-wordmark">BEREDT</span>
+            <div class="welcome-visual">
+                <svg class="welcome-connections" viewBox="0 0 660 260" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                    <path d="M95 158 Q325 -70 565 158" />
+                    <path d="M95 158 Q208 255 330 158 T565 158" />
+                </svg>
+                <div class="welcome-flow" role="group" aria-label="Behov, ressurser og samhandling">
+                    <a class="welcome-node welcome-node-need" asp-controller="Need" asp-action="Register">
+                        <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M20 7a4.6 4.6 0 0 1 8 0l17 29a4 4 0 0 1-3.5 6H6.5a4 4 0 0 1-3.5-6Z" fill="currentColor" /><path d="M24 16v11m0 7v.1" fill="none" stroke="#fff0bf" stroke-width="4" stroke-linecap="round" /></svg>
+                        <strong>Behov</strong><span>Meld inn behov</span>
+                    </a>
+                    <a class="welcome-node welcome-node-resource" asp-controller="Resource" asp-action="Register">
+                        <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M3 10h27v26H3zM30 19h8l8 10v7H30" fill="currentColor" /><path d="M34 22h3l5 7h-8Z" fill="#bcf0d7" /><g fill="currentColor" stroke="#baf0d6" stroke-width="2"><circle cx="12" cy="37" r="5"/><circle cx="36" cy="37" r="5"/></g></svg>
+                        <strong>Ressurs</strong><span>Tilby ressurser</span>
+                    </a>
+                    <div class="welcome-node welcome-node-together">
+                        <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m3 19 8-10 8 3m26 7L36 9l-9 3-12 10 5 4 8-6 12 12-9 9-7-2-13-12-5-2m30-10 7 10M17 29l9 9m-4-13 10 10m-5-14 11 10"/></g></svg>
+                        <strong>Samhandling</strong><span>Avtal bruk</span>
+                    </div>
+                </div>
             </div>
+            <p class="welcome-access">Begge handlingene krever innlogging. Ny leverandør? Opprett en konto via menyen øverst.</p>
         </div>
-        <div class="landing-grid">
-            <article class="panel landing-card needs-card">
-                <span class="landing-step">01</span><p class="eyebrow">FOR OFFENTLIGE AKTØRER</p>
-                <h2>Hva trenger dere?</h2><p>Har dere offentlig konto? Logg inn og registrer hva, hvor og når. Mangler dere tilgang, kontakt portalens administrator.</p>
-                <a asp-controller="Need" asp-action="Register">Registrer behov →</a>
+        <div class="welcome-cards">
+            <article class="welcome-card welcome-card-need">
+                <div class="welcome-card-heading"><span>01</span><p>FOR OFFENTLIGE AKTØRER</p></div>
+                <h2>Hva trenger dere?</h2>
+                <p>Registrer hva, hvor og når. Finn tilbud som dekker behovet.</p>
+                <a asp-controller="Need" asp-action="Register">Registrer et behov <span aria-hidden="true">→</span></a>
             </article>
-            <article class="panel landing-card resources-card">
-                <span class="landing-step">02</span><p class="eyebrow">FOR RESSURSLEVERANDØRER</p>
-                <h2>Hva kan dere bidra med?</h2><p>Har du leverandørkonto? Logg inn og registrer tilbudet. Bedrifter, organisasjoner og frivillige kan opprette konto.</p>
-                <a asp-controller="Resource" asp-action="Register">Registrer ressurs →</a>
+            <article class="welcome-card welcome-card-resource">
+                <div class="welcome-card-heading"><span>02</span><p>FOR RESSURSLEVERANDØRER</p></div>
+                <h2>Hva kan dere bidra med?</h2>
+                <p>Del ressurser med posisjon, tidsrom og riktig kontaktperson.</p>
+                <a asp-controller="Resource" asp-action="Register">Registrer en ressurs <span aria-hidden="true">→</span></a>
             </article>
-            <article class="panel landing-card followup-card">
-                <span class="landing-step">03</span><p class="eyebrow">FELLES OPPFØLGING</p>
-                <h2>Følg med hele veien</h2><p>Se tildelinger og varsler i portalen, og avtal praktisk bruk direkte.</p>
-                <a asp-controller="Account" asp-action="Login">Logg inn →</a>
+            <article class="welcome-card welcome-card-followup">
+                <div class="welcome-card-heading"><span>03</span><p>FELLES OPPFØLGING</p></div>
+                <h2>Følg hele veien</h2>
+                <p>Få oversikt over tildelinger, varsler og avtalt bruk.</p>
+                <a asp-controller="Account" asp-action="Login">Logg inn <span aria-hidden="true">→</span></a>
             </article>
         </div>
-        <div class="landing-access">
-            <p><strong>Ny ressursleverandør?</strong> <a asp-controller="Account" asp-action="Register">Opprett leverandørkonto</a>.</p>
-            <p>Offentlige brukerkontoer opprettes av portalens administrator.</p>
+        <div class="welcome-information">
+            <p><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><circle cx="13" cy="9" r="4"/><path d="M4 28v-4c0-8 18-8 18 0v4Zm21-21v10m-5-5h10"/></svg><span><strong>Ny ressursleverandør?</strong> <a asp-controller="Account" asp-action="Register">Opprett en leverandørkonto.</a></span></p>
+            <p><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="m16 3 11 5v8c0 7-11 13-11 13S5 23 5 16V8Zm-6 12 4 4 8-9"/></svg><span>Tilgang for offentlige aktører administreres av portalen.</span></p>
         </div>
     </section>
 }
