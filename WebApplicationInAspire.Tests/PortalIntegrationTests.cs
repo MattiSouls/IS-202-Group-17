@@ -377,7 +377,7 @@ public sealed class PortalIntegrationTests(MariaDbFixture database)
             ["Password"] = PortalHttp.Password,
             ["ReturnUrl"] = "https://example.org/"
         }, "/Account/Login");
-        Assert.Equal("/", login.Headers.Location!.ToString());
+        Assert.Equal("/Kart", login.Headers.Location!.ToString());
         using var wrong = new PortalHttp(database.Factory);
         for (var i = 0; i < 5; i++)
             Assert.Equal(HttpStatusCode.OK, (await wrong.PostAsync("/Account/Login", new()

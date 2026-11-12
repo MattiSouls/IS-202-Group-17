@@ -29,6 +29,7 @@
     <a asp-controller="Home" asp-action="Index" class="app-brand"><img class="brand-symbol" src="~/img/beredt-icon.svg" alt="" /><span>Beredt<small>Felles oversikt. Bedre beredskap.</small></span></a>
     <div class="workspace-label">ARBEIDSOMRÅDE</div>
     <nav aria-label="Sider">
+        <a asp-controller="Map" asp-action="Index" class="nav-entry @(section == "Map" ? "active" : "")" aria-current="@(section == "Map" ? "page" : null)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14m6-12v14"/></svg> Kart</a>
         <a asp-controller="Home" asp-action="Index" class="nav-entry @(section == "Home" && action == "Index" ? "active" : "")" aria-current="@(section == "Home" && action == "Index" ? "page" : null)"><span aria-hidden="true">▦</span> Oversikt</a>
         <a asp-controller="Resource" asp-action="Overview" class="nav-entry @(section == "Resource" ? "active" : "")" aria-current="@(section == "Resource" ? "page" : null)"><span aria-hidden="true">▤</span> @(isPublic ? "Finn ressurser" : "Mine ressurser")</a>
             @if (isPublic)

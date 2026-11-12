@@ -27,9 +27,10 @@ public class ResourceController(
     /// <summary>Viser skjemaet for leverandør eller administrator.</summary>
     [HttpGet]
     [Authorize(Roles = RoleNames.ResourceProvider + "," + RoleNames.Admin)]
-    public IActionResult Register()
+    public IActionResult Register(double? latitude = null, double? longitude = null)
     {
-        return View(new ResourceViewModel());
+        var valid = latitude is >= -90 and <= 90 && longitude is >= -180 and <= 180;
+        return View(new ResourceViewModel { Latitude = valid ? latitude : null, Longitude = valid ? longitude : null });
     }
 
     /// <summary>Lagrer gyldige inndata i MariaDB med innlogget bruker som eier.</summary>

@@ -18,7 +18,15 @@ public class NeedController(INeedRepository repository, AllocationService alloca
 
     /// <summary>Viser skjemaet for et nytt behov.</summary>
     [HttpGet]
-    public IActionResult Register() => View(new NeedViewModel());
+    public IActionResult Register(double? latitude = null, double? longitude = null,
+        double? areaSouth = null, double? areaWest = null, double? areaNorth = null, double? areaEast = null)
+    {
+        // Forhåndsutfylling fra kartsiden. Ugyldige verdier ignoreres.
+        if (GeoArea.From(areaSouth, areaWest, areaNorth, areaEast) is { } area)
+            return View(new NeedViewModel { AreaSouth = area.South, AreaWest = area.West, AreaNorth = area.North, AreaEast = area.East });
+        var point = latitude is >= -90 and <= 90 && longitude is >= -180 and <= 180;
+        return View(new NeedViewModel { Latitude = point ? latitude : null, Longitude = point ? longitude : null });
+    }
 
     /// <summary>Validerer og lagrer behovet med innlogget bruker som oppretter.</summary>
     [HttpPost]

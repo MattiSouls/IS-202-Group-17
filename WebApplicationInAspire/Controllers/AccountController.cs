@@ -118,6 +118,6 @@ public class AccountController(
     {
         return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
             ? returnUrl
-            : Url.Content("~/");
+            : Url.Content("~/Kart");
     }
 }
