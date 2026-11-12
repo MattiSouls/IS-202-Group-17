@@ -1,19 +1,23 @@
-@model WebApplicationInAspire.Models.ResourceViewModel
+﻿@model WebApplicationInAspire.Models.ResourceViewModel
 
 @{
     ViewData["Title"] = "Registrert ressurs";
 }
 <div class="container mt-4">
-    <h1>Registrert ressurs</h1>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h1 class="mb-0">Registrert ressurs</h1>
+        <!-- Snarvei rett til kartet for mobilbrukere -->
+        <a href="#overviewMap" class="btn btn-outline-primary btn-sm">📍 Hopp til kart</a>
+    </div>
 
-    <p>Her er informasjonen som ble registrert:</p>
+    <p class="text-muted">Her er informasjonen som ble registrert:</p>
 
-    <div class="card">
+    <div class="card shadow-sm">
         <div class="card-body">
 
-            <h2 class="card-title">@Model.Name</h2>
+            <h2 class="card-title h4 text-primary">@Model.Name</h2>
 
-            <dl class="row">
+            <dl class="row mb-0">
                 <dt class="col-sm-4">Type</dt>
                 <dd class="col-sm-8">@Model.Type</dd>
 
@@ -36,32 +40,31 @@
         </div>
     </div>
 </div>
-<div class="container mt-4">
-    <h2>Ressursens plassering</h2>
 
-    <div id="overviewMap" style="height: 400px; width: 100%;"></div>
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h4 mb-0">Ressursens plassering</h2>
+        <a href="#" class="btn btn-link btn-sm text-decoration-none">⬆ Til toppen</a>
+    </div>
+
+    <div id="overviewMap" style="height: 400px; width: 100%; border-radius: 8px; border: 1px solid #dee2e6;"></div>
 </div>
+
 @section Scripts {
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // Henter koordinatene som brukeren valgte på registreringskartet.
         var latitude = @Model.Latitude?.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var longitude = @Model.Longitude?.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-        // Oppretter kartet og sentrerer det på den registrerte posisjonen.
         var map = L.map('overviewMap').setView([latitude, longitude], 13);
 
-        // Legger til kartbilder fra OpenStreetMap.
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap-bidragsytere'
         }).addTo(map);
 
-        // Plasserer en markør på posisjonen som brukeren valgte.
         var marker = L.marker([latitude, longitude]).addTo(map);
-
-        // Viser navnet på ressursen når markøren trykkes på.
         marker.bindPopup(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Name)));
     </script>
 }
