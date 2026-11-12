@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Beredt">
+  <defs><clipPath id="beredt-clip"><circle cx="100" cy="100" r="90"/></clipPath></defs>
+  <circle cx="100" cy="100" r="90" fill="#f3f6f1"/>
+  <g clip-path="url(#beredt-clip)">
+    <circle cx="146" cy="62" r="13" fill="#efc24b"/>
+    <path d="M0 122 30 94l18 12 24-26 24 20 24-24 26 22 20-12 34 26v88H0z" fill="#cfe2d3"/>
+    <path d="M0 136c40-18 70-6 100-14s60 4 100-4v82H0z" fill="#9cc3a8"/>
+    <path d="M0 152c45-12 80-2 100-6 25-5 60 4 100-4v58H0z" fill="#5f9a7a"/>
+    <path d="M0 166c40-6 70 2 100-2 35-4 65 4 100-2v38H0z" fill="#24503f"/>
+    <path d="m50 176 10-5 8 4-6 4zm28-5 12-4 10 5-9 3zm34 3 9-5 13 3-8 5zm24 2 10-4 9 4-8 4z" fill="#fff"/>
+  </g>
+  <g fill="#2a5a47">
+    <ellipse cx="100" cy="42" rx="10" ry="6" transform="rotate(-4 100 42)"/>
+    <ellipse cx="100" cy="57" rx="14" ry="7" transform="rotate(3 100 57)"/>
+    <ellipse cx="100" cy="74" rx="18" ry="7.5" transform="rotate(-2 100 74)"/>
+    <ellipse cx="100" cy="92" rx="23" ry="8.5" transform="rotate(2 100 92)"/>
+    <ellipse cx="100" cy="112" rx="28" ry="9.5" transform="rotate(-2 100 112)"/>
+    <ellipse cx="100" cy="134" rx="33" ry="10.5" transform="rotate(1 100 134)"/>
+  </g>
+  <g fill="#fff" opacity=".16">
+    <ellipse cx="96" cy="40" rx="4.5" ry="1.8"/>
+    <ellipse cx="94" cy="54.5" rx="6" ry="2"/>
+    <ellipse cx="92" cy="71" rx="8" ry="2.2"/>
+    <ellipse cx="90" cy="88.5" rx="10" ry="2.5"/>
+    <ellipse cx="88" cy="108" rx="12" ry="2.8"/>
+    <ellipse cx="86" cy="129.5" rx="14" ry="3"/>
+  </g>
+  <circle cx="100" cy="100" r="90" fill="none" stroke="#24503f" stroke-width="8"/>
+</svg>

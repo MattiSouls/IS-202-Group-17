@@ -4,7 +4,7 @@
     var needsAccess = Model.ReturnUrl?.StartsWith("/Need/", StringComparison.OrdinalIgnoreCase) == true;
 }
 
-<section class="panel auth-panel"><h1 class="h3 mb-3">Logg inn</h1>
+<section class="panel auth-panel"><img class="auth-emblem" src="~/img/beredt-emblem.svg" alt="" /><h1 class="h3 mb-3">Logg inn i Beredt</h1>
 @if (needsAccess)
 {
     <div class="form-help"><strong>Registrering og oppfølging av behov</strong><p class="mb-0 mt-2">Logg inn med en offentlig brukerkonto. Du fortsetter til behovssiden etter innlogging. Trenger organisasjonen tilgang, kontakt portalens administrator.</p></div>
