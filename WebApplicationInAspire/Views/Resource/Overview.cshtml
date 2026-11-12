@@ -19,18 +19,23 @@ var routes = new Dictionary<string,string> { ["q"] = filter.Q ?? "", ["region"] 
 @if (Model.Resources.Count == 0) { <div class="panel empty-state"><h2>Ingen ressurser passer filtrene</h2><p>Prøv en annen kategori eller region. Nye tilbud vises når leverandøren har registrert tidsrom og tilgjengelighet.</p><a asp-action="Overview" class="btn btn-secondary">Vis alle</a></div> }
 else
 {
+<div class="actions mb-3"><a href="#overview-map-summary" id="map-shortcut" class="btn btn-outline-primary btn-sm">Hopp til kart</a></div>
 <div class="panel table-panel"><table class="resource-table"><caption class="visually-hidden">Ressurser med region, tidsrom og status</caption><thead><tr><th class="name-cell" scope="col">Ressurs</th><th scope="col">Region</th><th scope="col">Tidsrom (norsk tid)</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Handling</span></th></tr></thead><tbody>
 @foreach (var resource in Model.Resources) { var assigned = Model.AssignedResourceIds.Contains(resource.Id); var label = PortalDisplay.Availability(resource, assigned);
 <tr><td class="name-cell"><h2><a asp-action="Details" asp-route-returnUrl="@($"{Context.Request.Path}{Context.Request.QueryString}")" asp-route-id="@resource.Id"><span class="record-id">#@resource.Id</span> @resource.Name</a></h2><small>@resource.Type</small>@if(!string.IsNullOrWhiteSpace(resource.Description)){<p class="resource-description">@(resource.Description.Length>140 ? resource.Description[..140]+"…" : resource.Description)</p>}</td><td data-label="Region">@(string.IsNullOrWhiteSpace(resource.Region) ? "Mangler region" : resource.Region)</td><td data-label="Tidsrom"><partial name="_ResourcePeriod" model="resource" /></td><td data-label="Status"><span class="status-pill @(assigned ? "blue" : label == "Tilgjengelig nå" ? "green" : label == "Tilgjengelig senere" ? "amber" : "")">@label</span></td><td><a asp-action="Details" asp-route-returnUrl="@($"{Context.Request.Path}{Context.Request.QueryString}")" asp-route-id="@resource.Id" class="btn btn-secondary btn-sm" aria-label="Se detaljer om @resource.Name">Se detaljer →</a></td></tr>
 }</tbody></table></div>
 <partial name="_Paging" model="@(new Paging(filter.Page, Model.Total, "Resource", "Overview", routes))" />
-<details class="panel map-panel" data-map-toggle><summary>Vis kart for de @Model.Resources.Count ressursene på denne siden</summary><div id="overviewMap" class="map-box" aria-label="Ressursenes plassering"></div><p id="overview-map-status" class="map-caption" role="status">Listen over inneholder de samme ressursene og fungerer også uten kart.</p></details>
+<details class="panel map-panel" data-map-toggle><summary id="overview-map-summary">Vis kart for de @Model.Resources.Count ressursene på denne siden</summary><div id="overviewMap" class="map-box" aria-label="Ressursenes plassering"></div><p id="overview-map-status" class="map-caption" role="status">Listen over inneholder de samme ressursene og fungerer også uten kart.</p></details>
 }
 @section Scripts {
 <link rel="stylesheet" href="~/lib/leaflet/leaflet.css" /><script src="~/lib/leaflet/leaflet.js"></script><script src="~/js/area-picker.js" asp-append-version="true"></script>
 @if (Model.Resources.Count > 0) {
 <script nonce="@Context.Items["CspNonce"]">
 (() => {
+ document.getElementById('map-shortcut').addEventListener('click', () => {
+     document.querySelector('[data-map-toggle]').open = true;
+     document.getElementById('overview-map-summary').focus({ preventScroll: true });
+ });
  const status = document.getElementById('overview-map-status');
  if (typeof L === 'undefined') { status.textContent = 'Kartet kunne ikke lastes. Bruk ressurslisten over.'; return; }
  const resources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Resources.Select(r => new { name = r.Name, latitude = r.Latitude, longitude = r.Longitude })));
