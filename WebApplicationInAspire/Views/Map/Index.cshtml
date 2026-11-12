@@ -1,0 +1,70 @@
+@model WebApplicationInAspire.Models.MapViewModel
+@{
+    ViewData["Title"] = "Kart";
+    ViewData["MainClass"] = "map-workspace";
+    var returnUrl = "/Kart";
+    var data = new
+    {
+        resources = Model.Resources.Select(r => new { r.Id, r.Name, r.Type, r.Region, lat = r.Latitude, lng = r.Longitude, r.Availability, url = Url.Action("Details", "Resource", new { id = r.Id, returnUrl }) }),
+        needs = Model.Needs.Select(n => new { n.Id, n.Type, n.Region, n.Priority, n.PriorityClass, n.Status, n.NeededAt, lat = n.Latitude, lng = n.Longitude, n.Area, url = Url.Action("Details", "Need", new { id = n.Id }), matches = Url.Action("Matches", "Need", new { id = n.Id }) }),
+        registerNeed = Model.CanRegisterNeed ? Url.Action("Register", "Need") : null,
+        registerResource = Model.CanRegisterResource ? Url.Action("Register", "Resource") : null
+    };
+}
+<h1 class="visually-hidden">Kart over behov og ressurser</h1>
+<div class="map-app">
+    <div id="workMap" class="map-app-canvas" aria-label="Kart over behov og ressurser"></div>
+
+    <aside class="map-side" aria-label="Sidepanel">
+        <div class="map-side-actions">
+            @if (Model.CanRegisterNeed) { <button type="button" class="btn btn-need" data-place="need">＋ Registrer behov</button> }
+            @if (Model.CanRegisterResource) { <button type="button" class="btn @(Model.CanRegisterNeed ? "btn-secondary" : "btn-primary")" data-place="resource">＋ Registrer ressurs</button> }
+        </div>
+
+        <section class="map-place" data-place-panel hidden aria-live="polite">
+            <p class="eyebrow" data-place-kicker>NYTT BEHOV</p>
+            <h2 data-place-title>Klikk i kartet der hjelpen trengs</h2>
+            <div class="map-tools" role="group" aria-label="Velg kartverktøy" data-place-modes>
+                <button type="button" class="btn btn-secondary" data-mode="point" aria-pressed="true">Velg punkt</button>
+                <button type="button" class="btn btn-secondary" data-mode="drag" aria-pressed="false">Dra for å markere område</button>
+                <button type="button" class="btn btn-secondary" data-mode="corners" aria-pressed="false">Velg to hjørner</button>
+                <button type="button" class="btn btn-secondary" data-place-clear disabled>Fjern kartvalg</button>
+            </div>
+            <p class="muted" data-place-help>Du kan flytte punktet etterpå. Resten av opplysningene fyller du ut på neste side.</p>
+            <p class="map-place-coords" data-place-coords hidden></p>
+            <div class="actions"><a class="btn btn-primary" data-place-continue hidden>Fortsett med detaljer →</a><button type="button" class="btn btn-secondary" data-place-cancel>Avbryt</button></div>
+        </section>
+
+        <div class="map-side-body" data-side-body>
+            <div class="map-tabs" role="tablist" aria-label="Vis i sidepanelet">
+                @if (Model.CanSeeNeeds) { <button type="button" role="tab" id="tab-needs" aria-controls="panel-needs" aria-selected="true" data-tab="needs">Behov <span class="count">@Model.Needs.Count</span></button> }
+                <button type="button" role="tab" id="tab-resources" aria-controls="panel-resources" aria-selected="@(Model.CanSeeNeeds ? "false" : "true")" data-tab="resources">@(Model.CanSeeNeeds ? "Ressurser" : "Mine ressurser") <span class="count">@Model.Resources.Count</span></button>
+            </div>
+            <label for="map-search" class="visually-hidden">Søk i listen</label>
+            <input id="map-search" type="search" class="form-control map-search" placeholder="Søk på kategori, navn eller region" autocomplete="off" />
+            @if (Model.CanSeeNeeds)
+            {
+                <div id="panel-needs" role="tabpanel" aria-labelledby="tab-needs" class="map-list-wrap">
+                    <p class="map-list-note">Udekkede behov, viktigst først</p>
+                    <ul class="map-list" data-list="needs"></ul>
+                </div>
+            }
+            <div id="panel-resources" role="tabpanel" aria-labelledby="tab-resources" class="map-list-wrap" @(Model.CanSeeNeeds ? "hidden" : "")>
+                <p class="map-list-note">@(Model.CanSeeNeeds ? "Ledige tilbud fra leverandører" : "Ressursene du tilbyr")</p>
+                <ul class="map-list" data-list="resources"></ul>
+            </div>
+            <div class="map-legend" aria-hidden="true">
+                @if (Model.CanSeeNeeds) { <span><i class="dot need"></i>Behov</span><span><i class="dot need urgent"></i>Haster</span> }
+                <span><i class="dot resource"></i>Ressurs</span>
+            </div>
+        </div>
+        <p id="map-status" class="visually-hidden" role="status"></p>
+    </aside>
+</div>
+<noscript><p class="panel m-3">Kartet krever JavaScript. Bruk <a asp-controller="Resource" asp-action="Overview">ressurslisten</a>@if (Model.CanSeeNeeds) { <text> og <a asp-controller="Need" asp-action="Overview">behovslisten</a></text> }.</p></noscript>
+<script type="application/json" id="map-data">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)))</script>
+@section Scripts {
+<link rel="stylesheet" href="~/lib/leaflet/leaflet.css" />
+<script src="~/lib/leaflet/leaflet.js"></script>
+<script src="~/js/map-app.js" asp-append-version="true"></script>
+}
