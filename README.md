@@ -97,6 +97,8 @@ Ved oppdatering: hent siste kode og kjør `docker compose up -d --build --wait`.
 
 ### Valgfrie EXPO-demodata
 
+På Windows kan dere pakke ut hele prosjektet og dobbeltklikke `Start-demo.cmd`. Docker Desktop med Linux-containere må være installert. Første bygg krever internett. Startfilen oppretter `.env` med lokale demokontoer og tilfeldige databasepassord bare dersom filen mangler, starter app/database og åpner localhost. Har dere allerede `.env`, beholdes den; fyll da ut demoinnstillingene under selv. Hvis Windows blokkerer PowerShell-filen, les gjennom filen og bruk README-kommandoene manuelt eller skolens godkjente kjøreoppsett. Startfilen omgår ikke maskinens sikkerhetsinnstillinger.
+
 I lokal Development-kjøring kan dere sette `EXPO_DEMO_ENABLED=true`, `EXPO_DEMO_DATE=2026-11-16`, `SEED_PROVIDER_EMAIL` og `SEED_PROVIDER_PASSWORD` i `.env`, i tillegg til offentlig testkonto fra steg 2. Bruk egne lokale testpassord. Start deretter med `docker compose up -d --build --wait`.
 
 Dette oppretter seks tydelig merkede, syntetiske ressurser og tre åpne behov for pumpe, aggregat og transport. Behovene gjelder kl. 13 på valgt norsk dato; ressursene har tidsrom fra kl. 08 samme dag til kl. 18 sju dager senere. Pumpescenarioet har to mulige treff i Agder, én pumpe under vedlikehold og én i Rogaland. Telefonnumrene er plassholdere og skal ikke brukes til kontakt.
