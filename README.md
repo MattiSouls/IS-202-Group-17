@@ -95,6 +95,14 @@ Ved oppdatering: hent siste kode og kjør `docker compose up -d --build --wait`.
 4. **Ren start**
    - `docker compose down -v` og deretter `docker compose up -d --build --wait`. Dette sletter alle data.
 
+### Valgfrie EXPO-demodata
+
+I lokal Development-kjøring kan dere sette `EXPO_DEMO_ENABLED=true`, `EXPO_DEMO_DATE=2026-11-16`, `SEED_PROVIDER_EMAIL` og `SEED_PROVIDER_PASSWORD` i `.env`, i tillegg til offentlig testkonto fra steg 2. Bruk egne lokale testpassord. Start deretter med `docker compose up -d --build --wait`.
+
+Dette oppretter seks tydelig merkede, syntetiske ressurser og tre åpne behov for pumpe, aggregat og transport. Behovene gjelder kl. 13 på valgt norsk dato; ressursene har tidsrom fra kl. 08 samme dag til kl. 18 sju dager senere. Pumpescenarioet har to mulige treff i Agder, én pumpe under vedlikehold og én i Rogaland. Telefonnumrene er plassholdere og skal ikke brukes til kontakt.
+
+Innlasting er avslått som standard og kjører aldri i Production. Omstart lager ikke duplikater eller tilbakestiller redigeringer/tildelinger. Endring av dato oppdaterer ikke eksisterende demodata: rediger tidsrom/behov i appen ved en senere demo. Sett flagget tilbake til `false` etter innlasting; dataene blir beholdt. Bruk en separat lokal demodatabase dersom dere ønsker å holde demo adskilt fra andre data.
+
 ## Roller og funksjoner
 
 | Rolle | Tilgang |
