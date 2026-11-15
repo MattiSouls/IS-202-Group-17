@@ -14,16 +14,17 @@ public class ExpoDemoSeederTests(MariaDbFixture database)
     {
         var providerEmail = await database.UserAsync(RoleNames.ResourceProvider);
         var publicEmail = await database.UserAsync(RoleNames.PublicUser);
+        await using var db = database.Context();
+        var provider = await db.Users.SingleAsync(u => u.UserName == providerEmail);
+        var publicUser = await db.Users.SingleAsync(u => u.UserName == publicEmail);
         var settings = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["DemoData:Enabled"] = "true", ["DemoData:Date"] = "2026-11-16",
-            ["SeedUsers:Provider:Email"] = providerEmail, ["SeedUsers:PublicUser:Email"] = publicEmail
+            ["SeedUsers:Provider:Email"] = provider.Email, ["SeedUsers:PublicUser:Email"] = publicUser.Email
         }).Build();
         using var scope = database.Factory.Services.CreateScope();
         var environment = new HostingEnvironment { EnvironmentName = "Production" };
         await ExpoDemoSeeder.SeedAsync(scope.ServiceProvider, settings, environment);
-        await using var db = database.Context();
-        var provider = await db.Users.SingleAsync(u => u.Email == providerEmail);
         Assert.False(await db.Resources.AnyAsync(r => r.OwnerId == provider.Id));
 
         environment.EnvironmentName = "Development";
@@ -33,7 +34,6 @@ public class ExpoDemoSeederTests(MariaDbFixture database)
         settings["DemoData:Enabled"] = "true";
         await ExpoDemoSeeder.SeedAsync(scope.ServiceProvider, settings, environment);
         var resources = await db.Resources.Where(r => r.OwnerId == provider.Id).ToListAsync();
-        var publicUser = await db.Users.SingleAsync(u => u.Email == publicEmail);
         var needs = await db.Needs.Where(n => n.CreatedByUserId == publicUser.Id).ToListAsync();
         Assert.Equal(6, resources.Count); Assert.Equal(3, needs.Count);
         var pump = Assert.Single(needs, n => n.Type == "Pumpe");
