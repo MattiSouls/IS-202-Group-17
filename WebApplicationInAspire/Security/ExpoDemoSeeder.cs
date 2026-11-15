@@ -44,7 +44,7 @@ public static class ExpoDemoSeeder
             var (name, type, region, lat, lng, available) = offers[i];
             db.Resources.Add(new Resource
             {
-                CreationToken = token, Name = $"EXPO · {name}", Type = type, Region = region,
+                CreationToken = token, Name = name, Type = type, Region = region,
                 Latitude = lat, Longitude = lng, IsAvailable = available,
                 AvailableFrom = date.AddHours(8), AvailableUntil = date.AddDays(7).AddHours(18),
                 Description = "Syntetisk demonstrasjonsressurs, ikke et reelt tilbud. Kapasitet, transport og praktisk bruk avtales direkte.",
