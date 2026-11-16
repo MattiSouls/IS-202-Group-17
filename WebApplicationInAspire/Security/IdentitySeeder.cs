@@ -23,6 +23,8 @@ public static class IdentitySeeder
         var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
         await CreateTestUserAsync(userManager, configuration, "SeedUsers:PublicUser", RoleNames.PublicUser);
         await CreateTestUserAsync(userManager, configuration, "SeedUsers:Admin", RoleNames.Admin);
+        if (configuration.GetValue<bool>("DemoData:Enabled"))
+            await CreateTestUserAsync(userManager, configuration, "SeedUsers:Provider", RoleNames.ResourceProvider);
     }
 
     private static async Task CreateTestUserAsync(
