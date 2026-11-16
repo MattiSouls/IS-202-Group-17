@@ -6,10 +6,10 @@ using WebApplicationInAspire.Models.Entities;
 
 namespace WebApplicationInAspire.Security;
 
-/// <summary>Valgfrie, syntetiske EXPO-data. Kjøres bare i Development og endrer aldri eksisterende rader.</summary>
+/// <summary>Valgfrie, syntetiske EXPO-data. Kjøres bare i Development med eksplisitt nullstilling i en separat EXPO-database.</summary>
 public static class ExpoDemoSeeder
 {
-    public static async Task SeedAsync(IServiceProvider services, IConfiguration configuration, IHostEnvironment environment)
+    public static async Task SeedAsync(IServiceProvider services, IConfiguration configuration, IHostEnvironment environment, bool reset = false)
     {
         if (!environment.IsDevelopment() || !configuration.GetValue<bool>("DemoData:Enabled")) return;
 
@@ -21,19 +21,29 @@ public static class ExpoDemoSeeder
             || !await users.IsInRoleAsync(publicUser, RoleNames.PublicUser))
             throw new InvalidOperationException("EXPO-data krever konfigurert leverandørkonto og offentlig testkonto.");
 
-        var dateText = configuration["DemoData:Date"];
+        var dateText = reset ? TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "Europe/Oslo").ToString("yyyy-MM-dd") : configuration["DemoData:Date"];
         var date = string.IsNullOrWhiteSpace(dateText)
             ? TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "Europe/Oslo").Date.AddDays(1)
             : DateTime.ParseExact(dateText, "yyyy-MM-dd", CultureInfo.InvariantCulture);
         var db = services.GetRequiredService<ApplicationDbContext>();
+        if (reset && (!configuration.GetValue<bool>("DemoData:AllowReset")
+            || db.Database.GetDbConnection().Database != "resources_expo_reset"))
+            throw new InvalidOperationException("Nullstilling krever den separate EXPO-databasen.");
         // Faste nøkler hindrer duplikater ved omstart; eksisterende reservasjoner og endringer beholdes.
         await using var transaction = await db.Database.BeginTransactionAsync();
+        if (reset)
+        {
+            await db.AllocationEvents.ExecuteDeleteAsync();
+            await db.Notifications.ExecuteDeleteAsync();
+            await db.Needs.ExecuteDeleteAsync();
+            await db.Resources.ExecuteDeleteAsync();
+        }
         var offers = new[]
         {
             ("Vannpumpe med slangesett", "Pumpe", "Agder", 58.159, 8.018, true),
             ("Mobil lensepumpe", "Pumpe", "Agder", 58.147, 7.982, true),
             ("Aggregat 20 kW", "Aggregat", "Agder", 58.126, 7.957, true),
-            ("Transportbil med sjåfør", "Transport", "Agder", 58.173, 8.053, true),
+            ("Transportbil med sjåfør", "Transport", "Agder", 58.1467, 7.9956, true),
             ("Pumpe – vedlikehold", "Pumpe", "Agder", 58.152, 8.001, false),
             ("Vannpumpe i Stavanger", "Pumpe", "Rogaland", 58.970, 5.733, true)
         };
@@ -52,7 +62,7 @@ public static class ExpoDemoSeeder
             });
         }
 
-        var needs = new[] { ("Pumpe", "Lund – oversvømt kjeller", "Urgent", 58.159, 8.018), ("Aggregat", "Vågsbygd – strømbrudd", "High", 58.126, 7.957), ("Transport", "Søm – transport av utstyr", "Medium", 58.173, 8.053) };
+        var needs = new[] { ("Pumpe", "Lund – oversvømt kjeller", "Urgent", 58.159, 8.018), ("Aggregat", "Vågsbygd – strømbrudd", "High", 58.126, 7.957), ("Transport", "Kristiansand – transport av utstyr", "Medium", 58.1467, 7.9956) };
         for (var i = 0; i < needs.Length; i++)
         {
             var token = Token(100 + i);

@@ -34,6 +34,7 @@ services:
       SeedUsers__PublicUser__Password: ${SEED_PUBLIC_PASSWORD:-}
       SeedUsers__Admin__Email: ${SEED_ADMIN_EMAIL:-}
       SeedUsers__Admin__Password: ${SEED_ADMIN_PASSWORD:-}
+      DemoData__AllowReset: ${EXPO_ALLOW_RESET:-false}
       DemoData__Enabled: ${EXPO_DEMO_ENABLED:-false}
       DemoData__Date: ${EXPO_DEMO_DATE:-}
       SeedUsers__Provider__Email: ${SEED_PROVIDER_EMAIL:-}

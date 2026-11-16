@@ -97,6 +97,8 @@ Ved oppdatering: hent siste kode og kjør `docker compose up -d --build --wait`.
 
 ### Valgfrie EXPO-demodata
 
+For gjentatte demonstrasjoner kan «Start EXPO-demo på nytt» aktiveres med `EXPO_ALLOW_RESET=true` sammen med `EXPO_DEMO_ENABLED=true`. Bruk et separat Compose-prosjekt med egne nye volumer og `MARIADB_DATABASE=resources_expo_reset` fra første oppstart. Behold eksisterende arbeidsdatabase som eget miljø. Den konfigurerte offentlige demobrukeren eller administrator kan bekrefte nullstillingen. Alle ressurser, behov, varsler og tildelingshistorikk i denne demodatabasen erstattes atomisk med seks ressurser og tre åpne behov for dagens norske dato. Kontoer beholdes. Funksjonen er avslått som standard og utilgjengelig i Production.
+
 På Windows kan dere pakke ut hele prosjektet og dobbeltklikke `Start-demo.cmd`. Docker Desktop med Linux-containere må være installert. Første bygg krever internett. Startfilen oppretter `.env` med lokale demokontoer og tilfeldige databasepassord bare dersom filen mangler, starter app/database og åpner localhost. Har dere allerede `.env`, beholdes den; fyll da ut demoinnstillingene under selv. Hvis Windows blokkerer PowerShell-filen, les gjennom filen og bruk README-kommandoene manuelt eller skolens godkjente kjøreoppsett. Startfilen omgår ikke maskinens sikkerhetsinnstillinger.
 
 I lokal Development-kjøring kan dere sette `EXPO_DEMO_ENABLED=true`, `EXPO_DEMO_DATE=2026-11-16`, `SEED_PROVIDER_EMAIL` og `SEED_PROVIDER_PASSWORD` i `.env`, i tillegg til offentlig testkonto fra steg 2. Bruk egne lokale testpassord. Start deretter med `docker compose up -d --build --wait`.

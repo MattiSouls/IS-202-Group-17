@@ -1,3 +1,5 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Environment
 @using WebApplicationInAspire.Security
 @{
     var section = ViewContext.RouteData.Values["controller"]?.ToString();
@@ -35,6 +37,10 @@
             @if (isPublic)
             { <a asp-controller="Need" asp-action="Overview" class="nav-entry @(section == "Need" ? "active" : "")" aria-current="@(section == "Need" ? "page" : null)"><span aria-hidden="true">⚑</span> Behov og tildelinger</a> }
             <a asp-controller="Notifications" asp-action="Index" class="nav-entry @(section == "Notifications" ? "active" : "")" aria-current="@(section == "Notifications" ? "page" : null)"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg> Varsler</a>
+        @if (Environment.EnvironmentName == "Development" && Configuration["DemoData:Enabled"] == "true" && Configuration["DemoData:AllowReset"] == "true" && isPublic)
+        {
+            <a asp-controller="Expo" asp-action="Index" class="nav-entry">Start EXPO-demo på nytt</a>
+        }
     </nav>
     <div class="sidebar-bottom"><p class="eyebrow">GODT Å VITE</p><p>Kontakt leverandøren for å avtale praktisk bruk. Tilgjengelighet oppdateres av eieren.</p><a asp-controller="Home" asp-action="Privacy">Personvern og databruk</a></div>
 </aside>
