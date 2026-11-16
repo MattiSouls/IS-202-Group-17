@@ -60,7 +60,7 @@ public static class ExpoDemoSeeder
             var (type, location, priority, lat, lng) = needs[i];
             db.Needs.Add(new Need
             {
-                CreationToken = token, Type = type, Region = "Agder", Location = $"EXPO · {location}",
+                CreationToken = token, Type = type, Region = "Agder", Location = location,
                 NeededAt = date.AddHours(13), Priority = priority, Status = NeedStatuses.New,
                 Latitude = lat, Longitude = lng,
                 ContactName = "EXPO demokommune", PhoneNumber = "+4700000000", CreatedByUserId = publicUser.Id
