@@ -86,7 +86,6 @@ if (app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
 using (var seedScope = app.Services.CreateScope())
 {
     await IdentitySeeder.SeedAsync(seedScope.ServiceProvider, app.Configuration, app.Environment);
-    await ExpoDemoSeeder.SeedAsync(seedScope.ServiceProvider, app.Configuration, app.Environment);
 }
 
 if (!app.Environment.IsDevelopment())
